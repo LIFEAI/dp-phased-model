@@ -2,17 +2,28 @@ import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
 
-const C = {
+const DARK = {
   bg:"#0A1520",bgMid:"#0F1E2E",bgCard:"#13243A",bgLight:"#1A3050",
   border:"#1E3A54",gold:"#C9A84C",goldDim:"#8B6834",goldPale:"#F0DFA0",
   teal:"#29AFA0",tealDim:"#1A7068",sage:"#7BAE7F",sageDim:"#4A7050",
   coral:"#D96845",sky:"#4A9CC8",lavender:"#8A7EC8",amber:"#E8A030",
   cream:"#EAE4D6",creamDim:"#9A9080",
-  mist:"#C8D8CC",          // light green-grey — high contrast body text
-  lemon:"#E8E0A0",         // soft yellow — "puts in" highlight
+  mist:"#C8D8CC",lemon:"#E8E0A0",
   p1:"#C9A84C",p2:"#29AFA0",p3:"#7BAE7F",
   forest:"#2D6A4F",navy:"#1A3A6A",
 };
+const LIGHT = {
+  bg:"#F4F1EB",bgMid:"#EAE5D8",bgCard:"#FFFFFF",bgLight:"#E0D9CC",
+  border:"#C8BFA8",gold:"#8B6228",goldDim:"#C9A84C",goldPale:"#5C3D0E",
+  teal:"#1A7068",tealDim:"#29AFA0",sage:"#3D6B40",sageDim:"#7BAE7F",
+  coral:"#B84E2A",sky:"#2A6B96",lavender:"#5A4FA0",amber:"#B06010",
+  cream:"#1A1208",creamDim:"#5C4A30",
+  mist:"#2A3828",lemon:"#4A3800",
+  p1:"#8B6228",p2:"#1A7068",p3:"#3D6B40",
+  forest:"#1A4A30",navy:"#0F2A54",
+};
+// C is resolved dynamically in App based on theme state
+let C = DARK;
 const mono="'DM Mono','Courier New',monospace";
 const serif="'Cormorant Garamond','Georgia',serif";
 const sans="'Inter',system-ui,sans-serif";
@@ -913,6 +924,12 @@ export default function App(){
   const [saveFlash,setSaveFlash]=useState(false);
   const saveTimer=useRef(null);
 
+  // THEME
+  const [isDark,setIsDark]=useState(()=>{try{return localStorage.getItem("prt:theme")!=="light";}catch{return true;}});
+  C = isDark ? DARK : LIGHT;
+  const toggleTheme=()=>{const next=!isDark;setIsDark(next);try{localStorage.setItem("prt:theme",next?"dark":"light");}catch{}};
+  useEffect(()=>{document.body.style.background=isDark?DARK.bg:LIGHT.bg;},[isDark]);
+
   const mult={"low":0,"mid":.5,"high":1}[scenario];
   const S=settings;
 
@@ -1094,6 +1111,12 @@ export default function App(){
         <span style={{fontSize:9,color:saveFlash?C.sage:C.creamDim,fontFamily:mono,transition:"color 0.5s",marginLeft:4}}>
           {saveFlash?"● saved":"○ auto-save"}
         </span>
+        <button onClick={toggleTheme} title="Toggle light/dark mode" style={{
+          padding:"4px 9px",borderRadius:5,border:`1px solid ${C.border}`,
+          background:C.bgLight,color:C.cream,cursor:"pointer",fontSize:13,lineHeight:1,
+          transition:"all 0.2s",marginLeft:4}}>
+          {isDark?"☀️":"🌙"}
+        </button>
       </div>
     </div>
 
