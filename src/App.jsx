@@ -7,7 +7,10 @@ const C = {
   border:"#1E3A54",gold:"#C9A84C",goldDim:"#8B6834",goldPale:"#F0DFA0",
   teal:"#29AFA0",tealDim:"#1A7068",sage:"#7BAE7F",sageDim:"#4A7050",
   coral:"#D96845",sky:"#4A9CC8",lavender:"#8A7EC8",amber:"#E8A030",
-  cream:"#EAE4D6",creamDim:"#9A9080",p1:"#C9A84C",p2:"#29AFA0",p3:"#7BAE7F",
+  cream:"#EAE4D6",creamDim:"#9A9080",
+  mist:"#C8D8CC",          // light green-grey — high contrast body text
+  lemon:"#E8E0A0",         // soft yellow — "puts in" highlight
+  p1:"#C9A84C",p2:"#29AFA0",p3:"#7BAE7F",
   forest:"#2D6A4F",navy:"#1A3A6A",
 };
 const mono="'DM Mono','Courier New',monospace";
@@ -90,10 +93,10 @@ function Slider({label,val,set,min,max,step,fmt,sub,color=C.gold,disabled}){
   const pct=((val-min)/(max-min))*100;
   return(<div style={{marginBottom:13,opacity:disabled?0.4:1}}>
     <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-      <span style={{fontSize:11,color:C.creamDim}}>{label}</span>
+      <span style={{fontSize:11,color:C.mist}}>{label}</span>
       <span style={{fontSize:12,fontWeight:700,color,fontFamily:mono}}>{fmt(val)}</span>
     </div>
-    {sub&&<div style={{fontSize:10,color:C.creamDim,opacity:.7,marginBottom:3}}>{sub}</div>}
+    {sub&&<div style={{fontSize:10,color:C.mist,opacity:.9,marginBottom:3}}>{sub}</div>}
     <div style={{position:"relative",height:5,background:C.bgLight,borderRadius:3}}>
       <div style={{position:"absolute",left:0,top:0,height:"100%",width:`${pct}%`,background:`linear-gradient(90deg,${color}60,${color})`,borderRadius:3}}/>
       <input type="range" min={min} max={max} step={step} value={val} disabled={disabled}
@@ -105,13 +108,13 @@ function Slider({label,val,set,min,max,step,fmt,sub,color=C.gold,disabled}){
 
 function NumInput({label,val,set,prefix="$",suffix="",note}){
   return(<div style={{marginBottom:11}}>
-    <div style={{fontSize:10,color:C.creamDim,marginBottom:3}}>{label}</div>
+    <div style={{fontSize:10,color:C.mist,marginBottom:3}}>{label}</div>
     {note&&<div style={{fontSize:9,color:C.creamDim,opacity:.7,marginBottom:3}}>{note}</div>}
     <div style={{display:"flex",alignItems:"center",background:C.bgLight,borderRadius:5,border:`1px solid ${C.border}`,overflow:"hidden"}}>
-      {prefix&&<span style={{fontSize:11,color:C.creamDim,padding:"0 8px"}}>{prefix}</span>}
+      {prefix&&<span style={{fontSize:11,color:C.mist,padding:"0 8px"}}>{prefix}</span>}
       <input type="number" value={val} onChange={e=>set(Number(e.target.value)||0)}
         style={{flex:1,background:"transparent",border:"none",outline:"none",color:C.cream,fontFamily:mono,fontSize:12,padding:"6px 4px 6px 0"}}/>
-      {suffix&&<span style={{fontSize:11,color:C.creamDim,padding:"0 8px"}}>{suffix}</span>}
+      {suffix&&<span style={{fontSize:11,color:C.mist,padding:"0 8px"}}>{suffix}</span>}
     </div>
   </div>);
 }
@@ -147,17 +150,17 @@ function PhaseHeader({pid,active,onToggle,yr3noi}){
     </div>
     <div style={{flex:1}}>
       <div style={{fontSize:12,fontWeight:700,color:active?p.color:C.cream}}>{p.label} — {p.sublabel}</div>
-      <div style={{fontSize:9,color:C.creamDim}}>{p.desc}</div>
+      <div style={{fontSize:9,color:C.mist}}>{p.desc}</div>
     </div>
-    {active&&yr3noi>0&&<div style={{fontSize:10,fontWeight:700,color:p.color,fontFamily:mono,flexShrink:0,textAlign:"right"}}>{fD(yr3noi)}<span style={{fontSize:8,fontWeight:400,color:C.creamDim}}><br/>Yr3 NOI</span></div>}
+    {active&&yr3noi>0&&<div style={{fontSize:10,fontWeight:700,color:p.color,fontFamily:mono,flexShrink:0,textAlign:"right"}}>{fD(yr3noi)}<span style={{fontSize:9,fontWeight:500,color:C.mist}}><br/>Yr3 NOI</span></div>}
   </button>);
 }
 
 function Kpi({label,value,sub,accent,size=15,warn}){
   return(<div style={{background:C.bgCard,border:`1px solid ${warn?`${C.coral}60`:accent?`${accent}40`:C.border}`,borderRadius:8,padding:"10px 12px"}}>
-    <div style={{fontSize:9,color:C.creamDim,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:4}}>{label}</div>
+    <div style={{fontSize:9,color:C.mist,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:4}}>{label}</div>
     <div style={{fontSize:size,fontWeight:800,color:warn?C.coral:accent||C.cream,fontFamily:mono,lineHeight:1.1}}>{value}</div>
-    {sub&&<div style={{fontSize:10,color:C.creamDim,marginTop:4,lineHeight:1.4}}>{sub}</div>}
+    {sub&&<div style={{fontSize:10,color:C.mist,marginTop:4,lineHeight:1.4}}>{sub}</div>}
   </div>);
 }
 
@@ -177,7 +180,7 @@ function CapBar({cap,score,delta}){
     <div style={{height:5,background:C.bgLight,borderRadius:3,overflow:"hidden"}}>
       <div style={{height:"100%",width:`${pct*100}%`,background:`linear-gradient(90deg,${cap.color}70,${cap.color})`,borderRadius:3,transition:"width 0.5s ease"}}/>
     </div>
-    <div style={{fontSize:9,color:C.creamDim,marginTop:2}}>{cap.desc}</div>
+    <div style={{fontSize:10,color:C.mist,marginTop:2}}>{cap.desc}</div>
   </div>);
 }
 
@@ -485,7 +488,7 @@ function CoverPage({onEnter}){
         <div style={{fontSize:14,color:C.teal,fontWeight:600,marginBottom:4}}>
           Triple Play Conservation-Regenerative Acquisition  ·  219 Acres  ·  Gaviota Coast, California
         </div>
-        <div style={{fontSize:11,color:C.creamDim,maxWidth:640,margin:"0 auto",lineHeight:1.6}}>
+        <div style={{fontSize:12,color:C.mist,maxWidth:640,margin:"0 auto",lineHeight:1.7}}>
           A Place Regenerative Trust structure integrating a Public Benefit Corporation, a Stewardship Trust, and a Chumash Cultural Commons — financed through a blended conservation easement and community capital raise.
         </div>
         <div style={{display:"flex",justifyContent:"center",gap:10,marginTop:16,flexWrap:"wrap"}}>
@@ -495,7 +498,7 @@ function CoverPage({onEnter}){
             <div key={l} style={{background:C.bgCard,border:`1px solid ${C.border}`,borderRadius:8,
               padding:"10px 16px",textAlign:"center",minWidth:90}}>
               <div style={{fontSize:15,fontWeight:800,color:C.gold,fontFamily:mono}}>{v}</div>
-              <div style={{fontSize:9,color:C.creamDim,marginTop:2}}>{l}</div>
+              <div style={{fontSize:10,color:C.mist,marginTop:2}}>{l}</div>
             </div>
           ))}
         </div>
@@ -503,7 +506,7 @@ function CoverPage({onEnter}){
 
       {/* WATERFALL STRIP */}
       <div style={{marginBottom:28}}>
-        <div style={{fontSize:9,color:C.creamDim,letterSpacing:"0.15em",textTransform:"uppercase",marginBottom:10,fontWeight:700}}>
+        <div style={{fontSize:10,color:C.mist,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:10,fontWeight:700}}>
           Distribution Waterfall — Nine Tiers — Sequence Governs All Distributions
         </div>
         <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
@@ -512,11 +515,11 @@ function CoverPage({onEnter}){
               borderRadius:7,border:`1px solid ${s.color}40`,borderTop:`3px solid ${s.color}`,
               padding:"8px 10px"}}>
               <div style={{display:"flex",alignItems:"baseline",gap:5,marginBottom:3}}>
-                <span style={{fontSize:9,fontWeight:800,color:s.color,fontFamily:mono}}>{s.tier}</span>
-                <span style={{fontSize:10,fontWeight:700,color:C.cream,lineHeight:1.2}}>{s.label}</span>
+                <span style={{fontSize:10,fontWeight:800,color:s.color,fontFamily:mono}}>{s.tier}</span>
+                <span style={{fontSize:11,fontWeight:700,color:C.cream,lineHeight:1.2}}>{s.label}</span>
               </div>
-              <div style={{fontSize:11,fontWeight:700,color:s.color,fontFamily:mono,marginBottom:3}}>{s.amt}</div>
-              <div style={{fontSize:9,color:C.creamDim,lineHeight:1.4}}>{s.note}</div>
+              <div style={{fontSize:12,fontWeight:700,color:s.color,fontFamily:mono,marginBottom:3}}>{s.amt}</div>
+              <div style={{fontSize:10,color:C.mist,lineHeight:1.4}}>{s.note}</div>
             </div>
           ))}
         </div>
@@ -524,7 +527,7 @@ function CoverPage({onEnter}){
 
       {/* PLAYER CARDS */}
       <div style={{marginBottom:16}}>
-        <div style={{fontSize:9,color:C.creamDim,letterSpacing:"0.15em",textTransform:"uppercase",marginBottom:12,fontWeight:700}}>
+        <div style={{fontSize:10,color:C.mist,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:12,fontWeight:700}}>
           The Players — Who They Are · What They Put In · What They Get Back · Where They Sit in the Waterfall
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:10}}>
@@ -537,7 +540,7 @@ function CoverPage({onEnter}){
                 <span style={{fontSize:20,lineHeight:1}}>{p.icon}</span>
                 <div style={{flex:1}}>
                   <div style={{fontSize:13,fontWeight:800,color:p.color,lineHeight:1.2}}>{p.name}</div>
-                  <div style={{fontSize:10,color:C.creamDim,marginTop:2}}>{p.role}</div>
+                  <div style={{fontSize:10,color:C.mist,marginTop:2}}>{p.role}</div>
                   <div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:5}}>
                     {p.tags.map(t=>(
                       <span key={t} style={{fontSize:8,padding:"2px 6px",borderRadius:3,
@@ -552,26 +555,26 @@ function CoverPage({onEnter}){
                 border:`1px solid ${p.color}25`}}>
                 <div style={{fontSize:9,color:p.color,fontWeight:700,letterSpacing:"0.08em",
                   textTransform:"uppercase",marginBottom:3}}>Position</div>
-                <div style={{fontSize:10,color:C.cream,lineHeight:1.5}}>{p.position}</div>
+                <div style={{fontSize:11,color:C.cream,lineHeight:1.6}}>{p.position}</div>
               </div>
               {/* puts in / gets back */}
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7,marginBottom:7}}>
                 <div>
-                  <div style={{fontSize:8,color:C.creamDim,textTransform:"uppercase",letterSpacing:"0.08em",
-                    marginBottom:3,fontWeight:600}}>Puts In</div>
-                  <div style={{fontSize:10,color:C.creamDim,lineHeight:1.5}}>{p.puts}</div>
+                  <div style={{fontSize:9,color:C.lemon,textTransform:"uppercase",letterSpacing:"0.08em",
+                    marginBottom:3,fontWeight:700}}>Puts In</div>
+                  <div style={{fontSize:11,color:C.lemon,lineHeight:1.6}}>{p.puts}</div>
                 </div>
                 <div>
-                  <div style={{fontSize:8,color:p.color,textTransform:"uppercase",letterSpacing:"0.08em",
-                    marginBottom:3,fontWeight:600}}>Gets Back</div>
-                  <div style={{fontSize:10,color:C.cream,lineHeight:1.5}}>{p.gets}</div>
+                  <div style={{fontSize:9,color:p.color,textTransform:"uppercase",letterSpacing:"0.08em",
+                    marginBottom:3,fontWeight:700}}>Gets Back</div>
+                  <div style={{fontSize:11,color:C.cream,lineHeight:1.6}}>{p.gets}</div>
                 </div>
               </div>
               {/* waterfall */}
               <div style={{borderTop:`1px solid ${C.border}`,paddingTop:6}}>
-                <div style={{fontSize:8,color:C.creamDim,textTransform:"uppercase",letterSpacing:"0.08em",
-                  marginBottom:2,fontWeight:600}}>Waterfall</div>
-                <div style={{fontSize:10,color:C.creamDim,lineHeight:1.5,fontStyle:"italic"}}>{p.waterfall}</div>
+                <div style={{fontSize:8,color:C.mist,textTransform:"uppercase",letterSpacing:"0.08em",
+                  marginBottom:2,fontWeight:700}}>Waterfall</div>
+                <div style={{fontSize:10,color:C.mist,lineHeight:1.5,fontStyle:"italic"}}>{p.waterfall}</div>
               </div>
             </div>
           ))}
@@ -580,7 +583,7 @@ function CoverPage({onEnter}){
 
       {/* THREE ENTITIES */}
       <div style={{marginBottom:24}}>
-        <div style={{fontSize:9,color:C.creamDim,letterSpacing:"0.15em",textTransform:"uppercase",marginBottom:10,fontWeight:700}}>
+        <div style={{fontSize:10,color:C.mist,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:10,fontWeight:700}}>
           The Three Entities — One Purpose — PRT Covenants Bind All Three
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
@@ -598,14 +601,14 @@ function CoverPage({onEnter}){
                 <span style={{fontSize:18}}>{e.icon}</span>
                 <div>
                   <div style={{fontSize:12,fontWeight:800,color:e.color}}>{e.name}</div>
-                  <div style={{fontSize:9,color:C.creamDim}}>{e.sub}</div>
+                  <div style={{fontSize:10,color:C.mist}}>{e.sub}</div>
                 </div>
               </div>
               <div style={{padding:"10px 14px"}}>
                 {e.items.map((item,j)=>(
                   <div key={j} style={{display:"flex",gap:7,alignItems:"flex-start",marginBottom:5}}>
                     <span style={{color:e.color,fontSize:10,marginTop:1,flexShrink:0}}>›</span>
-                    <span style={{fontSize:10,color:C.creamDim,lineHeight:1.5}}>{item}</span>
+                    <span style={{fontSize:11,color:C.mist,lineHeight:1.5}}>{item}</span>
                   </div>
                 ))}
               </div>
@@ -615,7 +618,7 @@ function CoverPage({onEnter}){
         <div style={{background:`${C.forest}18`,border:`1px solid ${C.gold}30`,borderRadius:7,
           padding:"9px 14px",marginTop:8,textAlign:"center"}}>
           <span style={{fontSize:10,color:C.gold,fontWeight:700}}>PRT Covenant: </span>
-          <span style={{fontSize:10,color:C.creamDim}}>5% of gross PBC revenue flows to Stewardship Trust perpetually · Five Capitals reporting is non-waivable · No entity may act against conservation mission · All expansion requires Five Capitals readiness gate</span>
+          <span style={{fontSize:11,color:C.mist}}>5% of gross PBC revenue flows to Stewardship Trust perpetually · Five Capitals reporting is non-waivable · No entity may act against conservation mission · All expansion requires Five Capitals readiness gate</span>
         </div>
       </div>
 
@@ -626,7 +629,7 @@ function CoverPage({onEnter}){
           fontFamily:sans,letterSpacing:"0.05em",transition:"all 0.18s"}}>
           Open Financial Model  →
         </button>
-        <div style={{fontSize:9,color:C.creamDim,marginTop:8}}>
+        <div style={{fontSize:10,color:C.mist,marginTop:8}}>
           DRAFT · CONFIDENTIAL · © 2026 Regenerative Development Corp · Not investment advice
         </div>
       </div>
@@ -740,7 +743,7 @@ function WhatIfPage({purchasePrice,hbu,buyerTax}){
         <div style={{fontSize:17,fontWeight:800,fontFamily:serif,color:C.cream,marginBottom:3}}>
           Tax Deductions · Cash Flows · Returns to All Parties — Year 1 to {YEARS}
         </div>
-        <div style={{fontSize:10,color:C.creamDim}}>Adjust assumptions. Table updates live. Teal years = investor draws zero cash from PBC. Illustrative — not tax advice.</div>
+        <div style={{fontSize:11,color:C.mist}}>Adjust assumptions. Table updates live. Teal years = investor draws zero cash from PBC. Illustrative — not tax advice.</div>
       </div>
 
       {/* sliders */}
@@ -769,7 +772,7 @@ function WhatIfPage({purchasePrice,hbu,buyerTax}){
             ["16yr Implied IRR",fP(impliedIRR),impliedIRR>=irr?C.sage:C.coral],
           ].map(([l,v,c])=>(
             <div key={l} style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-              <span style={{fontSize:9,color:C.creamDim}}>{l}</span>
+              <span style={{fontSize:10,color:C.mist}}>{l}</span>
               <span style={{fontSize:10,fontFamily:mono,fontWeight:700,color:c}}>{v}</span>
             </div>
           ))}
@@ -875,11 +878,11 @@ function WhatIfPage({purchasePrice,hbu,buyerTax}){
         ].map(([c,l,d],i)=>(
           <div key={i} style={{background:C.bgCard,borderRadius:7,padding:"8px 10px",border:`1px solid ${c}30`,borderLeft:`3px solid ${c}`}}>
             <div style={{fontSize:10,fontWeight:700,color:c,marginBottom:2}}>{l}</div>
-            <div style={{fontSize:9,color:C.creamDim,lineHeight:1.5}}>{d}</div>
+            <div style={{fontSize:10,color:C.mist,lineHeight:1.5}}>{d}</div>
           </div>
         ))}
       </div>
-      <div style={{marginTop:9,fontSize:9,color:C.creamDim,fontStyle:"italic"}}>
+      <div style={{marginTop:9,fontSize:10,color:C.mist,fontStyle:"italic"}}>
         Tier 1–5 obligations = $22M note IO + $500K RDC mgmt + carry-back interest (Yr 1–2 only) + 5% PRT covenant on gross revenue. NOI base case drawn from Phased Model — use NOI Scenario slider to stress-test. All figures illustrative only.
       </div>
     </div>
@@ -1111,7 +1114,7 @@ export default function App(){
               {pid==="p2"&&<>
                 <div style={{fontSize:9,color:C.teal,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:5,fontWeight:700}}>
                   Unit Type Builder
-                  <span style={{fontSize:8,color:C.creamDim,fontWeight:400,textTransform:"none",marginLeft:6}}>+ {fD(S.p2InfraFloor+S.p2PermittingCost)} infra/permits always</span>
+                  <span style={{fontSize:9,color:C.mist,fontWeight:400,textTransform:"none",marginLeft:6}}>+ {fD(S.p2InfraFloor+S.p2PermittingCost)} infra/permits always</span>
                 </div>
                 <GlampingBuilder unitTypes={unitTypes} setUnitTypes={setUnitTypes} globalOcc={occ} setGlobalOcc={setOcc} S={S}/>
                 <div style={{height:1,background:C.border,margin:"8px 0 6px"}}/>
@@ -1137,7 +1140,7 @@ export default function App(){
           </div>);
         })}
         <div style={{height:1,background:C.border,margin:"10px 0 12px"}}/>
-        <div style={{fontSize:9,letterSpacing:"0.15em",textTransform:"uppercase",color:C.creamDim,marginBottom:11,fontWeight:600}}>Deal Parameters</div>
+        <div style={{fontSize:10,letterSpacing:"0.12em",textTransform:"uppercase",color:C.mist,marginBottom:11,fontWeight:700}}>Deal Parameters</div>
         {[
           {label:"Purchase Price",val:purchasePrice,set:setPP,min:55e6,max:75e6,step:500e3,fmt:v=>fM(v,1),sub:"Listed $65M · NCTC $62M"},
           {label:"Seller Finance Note",val:sellerNote,set:setNote,min:0,max:35e6,step:500e3,fmt:v=>fM(v,1),sub:"Roger carries note at close"},
@@ -1159,13 +1162,13 @@ export default function App(){
               {l:"Cash at Close",    v:fM(calc.cashClose,1), s:"gross · before tax",         c:C.cream},
               {l:"Cap Gains Tax",    v:`(${fM(calc.cgTax,1)})`,s:`${fP(S.ltcgRate+S.niitRate)} on ${fM(purchasePrice-S.costBasis,1)} gain`,c:C.coral},
               {l:"Net Cash After Tax",v:fM(calc.netCash,1),  s:"",                            c:C.cream},
-            ].map(({l,v,s,c})=><div key={l}><div style={{fontSize:9,color:C.creamDim,marginBottom:2}}>{l}</div><div style={{fontSize:18,fontWeight:800,color:c,fontFamily:mono,lineHeight:1}}>{v}</div>{s&&<div style={{fontSize:9,color:C.creamDim}}>{s}</div>}</div>)}
+            ].map(({l,v,s,c})=><div key={l}><div style={{fontSize:10,color:C.mist,marginBottom:2}}>{l}</div><div style={{fontSize:18,fontWeight:800,color:c,fontFamily:mono,lineHeight:1}}>{v}</div>{s&&<div style={{fontSize:10,color:C.mist}}>{s}</div>}</div>)}
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1.4fr",gap:10,paddingTop:9,borderTop:`1px solid ${C.gold}35`}}>
             <div>
               <div style={{fontSize:9,color:C.creamDim,marginBottom:2}}>+ Seller Note NPV</div>
               <div style={{fontSize:14,fontWeight:700,color:C.gold,fontFamily:mono}}>+{fM(calc.noteNPV,1)}</div>
-              <div style={{fontSize:9,color:C.creamDim}}>{fP(S.noteInterestRate)} · {S.noteTerm}yr</div>
+              <div style={{fontSize:10,color:C.mist}}>{fP(S.noteInterestRate)} · {S.noteTerm}yr</div>
             </div>
             <div>
               <div style={{fontSize:9,color:C.amber,marginBottom:2}}>+ One-Time Rev</div>
@@ -1217,7 +1220,7 @@ export default function App(){
               {["p1","p2","p3"].filter(p=>activePhases[p]).map(p=>(
                 <div key={p} style={{display:"flex",alignItems:"center",gap:3}}>
                   <div style={{width:6,height:6,borderRadius:2,background:PHASE_META[p].color}}/>
-                  <span style={{fontSize:9,color:C.creamDim}}>{PHASE_META[p].label}</span>
+                  <span style={{fontSize:10,color:C.mist}}>{PHASE_META[p].label}</span>
                 </div>
               ))}
             </div>
@@ -1237,7 +1240,7 @@ export default function App(){
         {/* STREAM TABLE */}
         {anyP&&<div style={{background:C.bgCard,border:`1px solid ${C.border}`,borderRadius:9,padding:"11px 11px"}}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 60px 72px 66px",gap:4,padding:"0 7px 6px"}}>
-            {["Stream","Yr 1","Yr 3 Gross","NOI"].map(h=><div key={h} style={{fontSize:8,color:C.creamDim,textTransform:"uppercase",letterSpacing:"0.1em",textAlign:h==="Stream"?"left":"right"}}>{h}</div>)}
+            {["Stream","Yr 1","Yr 3 Gross","NOI"].map(h=><div key={h} style={{fontSize:10,color:C.mist,textTransform:"uppercase",letterSpacing:"0.08em",textAlign:h==="Stream"?"left":"right"}}>{h}</div>)}
           </div>
           {["p1","p2","p3"].map(pid=>{
             if(!activePhases[pid])return null;
@@ -1282,7 +1285,7 @@ export default function App(){
 
       {/* COL 3 — FIVE CAPITALS */}
       <div style={{padding:"14px 13px",overflowY:"auto"}}>
-        <div style={{fontSize:9,letterSpacing:"0.15em",textTransform:"uppercase",color:C.creamDim,marginBottom:9,fontWeight:600}}>Five Capitals Outputs</div>
+        <div style={{fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase",color:C.mist,marginBottom:9,fontWeight:700}}>Five Capitals Outputs</div>
         <div style={{display:"flex",gap:3,marginBottom:14,background:C.bgLight,borderRadius:6,padding:3}}>
           {[["capitals","Scores"],["radar","Radar"],["structure","Structure"]].map(([k,l])=>(
             <button key={k} onClick={()=>setTabR(k)} style={{flex:1,padding:"5px 3px",borderRadius:4,border:"none",cursor:"pointer",
@@ -1293,7 +1296,7 @@ export default function App(){
         {tabR==="capitals"&&<div>
           {CAPITALS.map(cap=><CapBar key={cap.key} cap={cap} score={anyP?calc.scores[cap.key]:S[`base${cap.key}`]} delta={anyP?calc.deltas[cap.key]:0}/>)}
           <div style={{background:C.bgCard,border:`1px solid ${C.border}`,borderRadius:7,padding:"10px 12px",marginTop:10}}>
-            <div style={{fontSize:8,color:C.creamDim,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:9}}>Impact by Phase (active streams)</div>
+            <div style={{fontSize:10,color:C.mist,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:9}}>Impact by Phase (active streams)</div>
             {["p1","p2","p3"].map(pid=>{
               const ph=PHASE_META[pid];
               const pd={Natural:0,Social:0,Cultural:0,Built:0,Financial:0};
@@ -1329,7 +1332,7 @@ export default function App(){
           {CAPITALS.map(cap=><div key={cap.key} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:`1px solid ${C.border}`}}>
             <div style={{display:"flex",gap:6,alignItems:"center"}}>
               <span>{cap.icon}</span>
-              <div><div style={{fontSize:11,fontWeight:600,color:cap.color}}>{cap.key}</div><div style={{fontSize:9,color:C.creamDim}}>{cap.desc}</div></div>
+              <div><div style={{fontSize:11,fontWeight:600,color:cap.color}}>{cap.key}</div><div style={{fontSize:10,color:C.mist}}>{cap.desc}</div></div>
             </div>
             <div style={{fontSize:14,fontWeight:800,fontFamily:mono,color:cap.color}}>{anyP?calc.scores[cap.key].toFixed(0):S[`base${cap.key}`]}</div>
           </div>)}
@@ -1344,16 +1347,16 @@ export default function App(){
           ].map((item,i)=><div key={i} style={{background:C.bgCard,borderRadius:7,padding:"11px 12px",marginBottom:7,border:`1px solid ${item.color}30`,borderLeft:`3px solid ${item.color}`}}>
             <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:4}}>
               <span style={{fontSize:14}}>{item.icon}</span>
-              <div><div style={{fontSize:11,fontWeight:800,color:item.color}}>{item.title}</div><div style={{fontSize:9,color:C.creamDim}}>{item.role}</div></div>
+              <div><div style={{fontSize:11,fontWeight:800,color:item.color}}>{item.title}</div><div style={{fontSize:10,color:C.mist}}>{item.role}</div></div>
             </div>
-            <div style={{fontSize:10,color:C.creamDim,lineHeight:1.55}}>{item.desc}</div>
+            <div style={{fontSize:10,color:C.mist,lineHeight:1.55}}>{item.desc}</div>
           </div>)}
           <div style={{background:C.bgCard,borderRadius:7,padding:"11px 12px",border:`1px solid ${C.border}`,marginTop:10}}>
             <div style={{fontSize:10,fontWeight:700,color:C.cream,marginBottom:7}}>PRT Covenants — Run with the Land</div>
             {["Five Capitals annual reporting","Readiness gates for all expansion","Chumash priority access — irrevocable","Marine Sanctuary alignment required","Cultural capital triggers covenant review"].map((cov,i)=>(
               <div key={i} style={{display:"flex",gap:6,marginBottom:5,alignItems:"flex-start"}}>
                 <div style={{width:3,height:3,borderRadius:"50%",background:C.gold,marginTop:5,flexShrink:0}}/>
-                <div style={{fontSize:10,color:C.creamDim}}>{cov}</div>
+                <div style={{fontSize:10,color:C.mist}}>{cov}</div>
               </div>
             ))}
           </div>
