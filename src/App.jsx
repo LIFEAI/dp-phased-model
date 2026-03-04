@@ -1,26 +1,15 @@
-import React from 'react';
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
 
-const DARK = {
+const C = {
   bg:"#0A1520",bgMid:"#0F1E2E",bgCard:"#13243A",bgLight:"#1A3050",
   border:"#1E3A54",gold:"#C9A84C",goldDim:"#8B6834",goldPale:"#F0DFA0",
   teal:"#29AFA0",tealDim:"#1A7068",sage:"#7BAE7F",sageDim:"#4A7050",
   coral:"#D96845",sky:"#4A9CC8",lavender:"#8A7EC8",amber:"#E8A030",
   cream:"#EAE4D6",creamDim:"#9A9080",p1:"#C9A84C",p2:"#29AFA0",p3:"#7BAE7F",
+  forest:"#2D6A4F",navy:"#1A3A6A",
 };
-
-const LIGHT = {
-  bg:"#F4F1EB",bgMid:"#EAE5D8",bgCard:"#FFFFFF",bgLight:"#E0D9CC",
-  border:"#C8BFA8",gold:"#8B6228",goldDim:"#C9A84C",goldPale:"#5C3D0E",
-  teal:"#1A7068",tealDim:"#29AFA0",sage:"#3D6B40",sageDim:"#7BAE7F",
-  coral:"#B84E2A",sky:"#2A6B96",lavender:"#5A4FA0",amber:"#B06010",
-  cream:"#1A1208",creamDim:"#5C4A30",p1:"#8B6228",p2:"#1A7068",p3:"#3D6B40",
-};
-
-// C is set dynamically in App and passed via context — default dark for module-level use
-let C = DARK;
 const mono="'DM Mono','Courier New',monospace";
 const serif="'Cormorant Garamond','Georgia',serif";
 const sans="'Inter',system-ui,sans-serif";
@@ -91,61 +80,8 @@ const SK_SETTINGS ="prt:settings:v1";
 const SK_SESSION  ="prt:session:dos-pueblos:v1";
 const SK_SCENARIOS="prt:scenarios:dos-pueblos:v1";
 
-// Storage helpers — safe in published artifacts (window.storage may not exist)
-// ─── SUPABASE CONFIG ──────────────────────────────────────────────────────────
-// Paste your Supabase project URL and anon key here.
-// Table required: CREATE TABLE prt_storage (key text primary key, value text, updated_at timestamptz default now());
-// RLS policy: FOR ALL USING (true) WITH CHECK (true);
-const SB_URL = "https://uvojezuorjgqzmhhgluu.supabase.co";
-const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV2b2plenVvcmpncXptaGhnbHV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzMTQ3MTcsImV4cCI6MjA4Njg5MDcxN30.1irtkNYnTJbvg8VJMQh-VpByqpmIRiASwR1qTOZ6RiQ";
-const SB_READY = SB_URL !== "YOUR_SUPABASE_URL" && SB_KEY !== "YOUR_SUPABASE_ANON_KEY";
-
-const SB_HEADERS = {
-  apikey: SB_KEY,
-  Authorization: `Bearer ${SB_KEY}`,
-  "Content-Type": "application/json",
-};
-
-async function sGet(key, fb) {
-  // Try Supabase first (works everywhere — published, Claude.ai, any browser)
-  if (SB_READY) {
-    try {
-      const res = await fetch(
-        `${SB_URL}/rest/v1/prt_storage?key=eq.${encodeURIComponent(key)}&select=value`,
-        { headers: SB_HEADERS }
-      );
-      const data = await res.json();
-      if (Array.isArray(data) && data[0]?.value) return JSON.parse(data[0].value);
-    } catch {}
-  }
-  // Fallback: window.storage (Claude.ai only)
-  if (typeof window !== "undefined" && typeof window.storage?.get === "function") {
-    try {
-      const timeout = new Promise((_,rej) => setTimeout(() => rej(new Error("timeout")), 1500));
-      const r = await Promise.race([window.storage.get(key), timeout]);
-      if (r) return JSON.parse(r.value);
-    } catch {}
-  }
-  return fb;
-}
-
-async function sSet(key, val) {
-  const serialized = JSON.stringify(val);
-  // Write to Supabase (upsert via merge-duplicates)
-  if (SB_READY) {
-    try {
-      await fetch(`${SB_URL}/rest/v1/prt_storage`, {
-        method: "POST",
-        headers: { ...SB_HEADERS, Prefer: "resolution=merge-duplicates" },
-        body: JSON.stringify({ key, value: serialized, updated_at: new Date().toISOString() }),
-      });
-    } catch {}
-  }
-  // Also write to window.storage when available (keeps Claude.ai in sync)
-  if (typeof window !== "undefined" && typeof window.storage?.set === "function") {
-    try { await window.storage.set(key, serialized); } catch {}
-  }
-}
+async function sGet(key,fb){try{const r=await window.storage.get(key);return r?JSON.parse(r.value):fb;}catch{return fb;}}
+async function sSet(key,val){try{await window.storage.set(key,JSON.stringify(val));}catch{}}
 
 const sRev=(s,m,yr)=>{const lo=yr===1?s.yr1Lo:s.yr3Lo,hi=yr===1?s.yr1Hi:s.yr3Hi;return lo+(hi-lo)*m;};
 
@@ -433,21 +369,526 @@ function ScenariosPage({scenarios,onSave,onLoad,onDelete,onClose}){
   </div>);
 }
 
+// ═══ COVER PAGE ══════════════════════════════════════════════════════════════
+function CoverPage({onEnter}){
+
+  const PLAYERS=[
+    {
+      id:"roger",
+      color:C.gold,
+      icon:"🏡",
+      name:"Roger & Robin Himovitz",
+      role:"Seller / Conservation Sponsor",
+      position:"Exits with full consideration. Conservation legacy preserved.",
+      gets:"~$49–50M total — $22M assumed debt relief + $20–25M investor cash at close + $2–3M carry-back note (IRC §453 installment sale). Roger's all-in basis ~$50–55M; structure delivers parity while permanently protecting the coast.",
+      puts:"219 acres · 18 parcels · Gaviota Coast · $22M existing IO note · relationships with Chumash nations · Dos Pueblos Institute 501(c)(3)",
+      waterfall:"Seller — paid at close. Not a waterfall participant post-close.",
+      tags:["At Close","Conservation Sponsor","Installment Sale §453"],
+    },
+    {
+      id:"trust",
+      color:C.coral,
+      icon:"🏦",
+      name:"Income Trust",
+      role:"Senior Lender — Existing $22M First Mortgage",
+      position:"Tier 1 — paid first, always, every year.",
+      gets:"$1,100,000/yr interest-only at 5% on $22M balance. Note assumed by new PBC at close. Trust receives same IO stream with no disruption — preferred outcome over payoff.",
+      puts:"$22M already deployed. No new capital required.",
+      waterfall:"Tier 1 — senior to all equity. Pre-condition of every other distribution. Non-negotiable.",
+      tags:["Tier 1","5% IO","Note Assumption","Senior Debt"],
+    },
+    {
+      id:"investor",
+      color:C.sky,
+      icon:"💎",
+      name:"Anchor Investor",
+      role:"Founding Equity — 60% PBC Units",
+      position:"Tier 6–7 — senior to community. Blended 12% IRR; tax savings credited first.",
+      gets:"$57–59M in IRC §170(h) conservation easement tax savings over 16 years (at ~50% combined CA+Fed rate) + 60% of PBC NAV growth ($27–33M investor share at Year 7) + full 1× return of capital + 12% IRR cash distributions from Year 8+. Net cost of ownership negative before a single dollar of operations.",
+      puts:"$20–25M equity at close. Must have California AGI sufficient to absorb ~$5–7M in deductions/year. Must hold title individually or as grantor trust (not LLC/irrevocable trust) for §170(h) qualification.",
+      waterfall:"Tier 6 — blended 12% IRR (tax savings credited first; zero cash draw from PBC Years 1–7). Tier 7 — full 1× return of capital before community preferred begins.",
+      tags:["Tier 6–7","60% PBC","12% Blended IRR","§170(h)","Senior to Community"],
+    },
+    {
+      id:"community",
+      color:C.lavender,
+      icon:"🤝",
+      name:"Community Members (~200)",
+      role:"Community Capital — 20% PBC Units",
+      position:"Tier 8 — subordinated to investor. 1.67× preferred return on equity component.",
+      gets:"$10,060 in immediate Year 1 tax savings per member ($20K charitable component × ~50% rate). 1.67× preferred return on $30K equity = $50K/unit returned before residual distributions. Service credits (glamping nights, farm tours, cultural programs). Ongoing 20% residual distributions post-preferred.",
+      puts:"$50,000/unit — split $30K equity (PBC units) + $20K charitable contribution (Stewardship Trust, non-refundable, qualifies as IRC §170(b) deduction).",
+      waterfall:"Tier 8 — subordinated to Tiers 1–7. Begins after investor full 1× + IRR satisfied (~Year 7–9). $10M total preferred pool across 200 members.",
+      tags:["Tier 8","$50K/unit","1.67× Preferred","§170(b)","Subordinated"],
+    },
+    {
+      id:"chumash",
+      color:C.sage,
+      icon:"🏺",
+      name:"Chumash Nations",
+      role:"Cultural Commons — Multi-Tribal Co-Management",
+      position:"Co-sovereign. Not a financial investor. Governance rights run with the land in perpetuity.",
+      gets:"Return of Mikiw and Kuyamu village sites (BIA Land Buy-Back / CA tribal grants, Year 1–2). Irrevocable co-management rights over cultural zones. Chumash Cultural Commons governance seats. Revenue share from Chumash Kitchen, cultural programs, NOAA sanctuary grants. TEK documentation program. Marine interface access.",
+      puts:"Co-management expertise · Traditional Ecological Knowledge · Cultural authority and legitimacy that no buyer can purchase or replicate.",
+      waterfall:"PRT Covenant recipient — 5% of gross PBC revenue flows to Stewardship Trust, which funds cultural programs. Governance rights are not subordinated to any financial tier.",
+      tags:["Co-Sovereign","Cultural Commons","TEK","Irrevocable","PRT Covenant"],
+    },
+    {
+      id:"rdc",
+      color:C.amber,
+      icon:"⚙️",
+      name:"RDC + Regenesis Group",
+      role:"Deal Architect · Manager · Consultant",
+      position:"Tier 3 (management fee, operating priority) + Tier 9 (promote and equity, back-loaded).",
+      gets:"$20K retainer at signing + $500K Transaction Completion Advisory Fee at close + $500K/yr management fee (Years 1–7, stepping down to $350K/yr and $250K/yr at stabilization gates) + 4% development fee on new capital projects ($250K minimum) + 20% carried interest (promote) above hurdle + 20% PBC founding equity on sale. Total estimated economics: $2–6M over 8-year hold, back-loaded.",
+      puts:"All work product — financial models, Triple Play structure, conservation easement design, Five Capitals framework, community raise architecture, PRT governance, this application. 7-year management commitment post-close.",
+      waterfall:"Tier 3 (management fee — operating priority, pre-equity). Tier 9 (promote + 20% equity residual — earned only after investor and community are whole).",
+      tags:["Tier 3","Tier 9","20% Promote","20% Equity","Back-Loaded","Deal Architect"],
+    },
+    {
+      id:"stewardship",
+      color:C.teal,
+      icon:"🌿",
+      name:"Stewardship Trust  (501c3)",
+      role:"Land Sovereign · Conservation Easement Holder",
+      position:"PRT Covenant recipient. Holds fee title. Issues conservation easement to LTSBC. Non-financial party — mission holder.",
+      gets:"$4–5M from community charitable contributions at close ($20K × 200 members). 5% of gross PBC revenue annually (PRT Covenant — non-waivable). Holds perpetual conservation easement and fee title. Governs via Five Capitals readiness gates.",
+      puts:"Conservation easement to Land Trust for Santa Barbara County (LTSBC). Governance covenants. Mission accountability.",
+      waterfall:"Tier 5 — 5% PRT Covenant on gross revenue. Paid before any equity distributions. Funded at close from community raise charitable component.",
+      tags:["Tier 5","501(c)(3)","PRT Covenant","Conservation Easement","Land Sovereign"],
+    },
+  ];
+
+  const STACK=[
+    {tier:"1",label:"$22M Income Trust — Note IO",        amt:"$1.1M/yr",  color:C.coral,   note:"Senior debt · 5% IO · paid first always"},
+    {tier:"2",label:"Senior Conservation Loan (if any)",  amt:"Scenario A",color:"#555",    note:"Scenario C carries no new senior debt"},
+    {tier:"3",label:"RDC Management Fee",                 amt:"$500K/yr",  color:C.amber,   note:"Operating priority · pre-equity"},
+    {tier:"4",label:"Roger Carry-Back Interest",          amt:"$88K/yr",   color:C.gold,    note:"3.5% IO · retired Year 1–2 from Chumash parcel sale"},
+    {tier:"5",label:"Stewardship Trust — PRT Covenant",   amt:"5% gross",  color:C.teal,    note:"Non-waivable · funds conservation + cultural programs"},
+    {tier:"6",label:"Investor — Blended 12% IRR",         amt:"~$0 Yr 1–7",color:C.sky,     note:"Tax savings credited first · zero cash draw Years 1–7"},
+    {tier:"7",label:"Investor — Return of Capital",       amt:"$20–25M",   color:C.sky,     note:"Full 1× before community preferred begins"},
+    {tier:"8",label:"Community — 1.67× Preferred",        amt:"$50K/unit", color:C.lavender,note:"200 members · subordinated to Tiers 6–7 · ~Year 7–9"},
+    {tier:"9",label:"RDC Promote + Residual 60/20/20",    amt:"20% then ÷",color:C.amber,   note:"After community preferred · Inv 60% / Comm 20% / RDC 20%"},
+  ];
+
+  return(
+    <div style={{overflowY:"auto",height:"calc(100vh - 48px)",padding:"28px 32px",maxWidth:1200,margin:"0 auto"}}>
+
+      {/* HERO */}
+      <div style={{textAlign:"center",marginBottom:32,paddingBottom:24,borderBottom:`1px solid ${C.border}`}}>
+        <div style={{fontSize:9,color:C.gold,letterSpacing:"0.3em",textTransform:"uppercase",marginBottom:8}}>
+          Regenerative Development Corp  ·  Regenesis Group  ·  Confidential  ·  March 2026
+        </div>
+        <div style={{fontSize:32,fontWeight:800,fontFamily:serif,color:C.cream,letterSpacing:"-0.02em",marginBottom:6}}>
+          Dos Pueblos Ranch
+        </div>
+        <div style={{fontSize:14,color:C.teal,fontWeight:600,marginBottom:4}}>
+          Triple Play Conservation-Regenerative Acquisition  ·  219 Acres  ·  Gaviota Coast, California
+        </div>
+        <div style={{fontSize:11,color:C.creamDim,maxWidth:640,margin:"0 auto",lineHeight:1.6}}>
+          A Place Regenerative Trust structure integrating a Public Benefit Corporation, a Stewardship Trust, and a Chumash Cultural Commons — financed through a blended conservation easement and community capital raise.
+        </div>
+        <div style={{display:"flex",justifyContent:"center",gap:10,marginTop:16,flexWrap:"wrap"}}>
+          {[["$50M","Acquisition Price"],["$133M","HBU Appraisal"],["$115–118M","Easement Deduction"],
+            ["$57–59M","Tax Savings / 16yr"],["~200","Community Members"],["219 ac","Gaviota Coast"]
+          ].map(([v,l])=>(
+            <div key={l} style={{background:C.bgCard,border:`1px solid ${C.border}`,borderRadius:8,
+              padding:"10px 16px",textAlign:"center",minWidth:90}}>
+              <div style={{fontSize:15,fontWeight:800,color:C.gold,fontFamily:mono}}>{v}</div>
+              <div style={{fontSize:9,color:C.creamDim,marginTop:2}}>{l}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* WATERFALL STRIP */}
+      <div style={{marginBottom:28}}>
+        <div style={{fontSize:9,color:C.creamDim,letterSpacing:"0.15em",textTransform:"uppercase",marginBottom:10,fontWeight:700}}>
+          Distribution Waterfall — Nine Tiers — Sequence Governs All Distributions
+        </div>
+        <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
+          {STACK.map(s=>(
+            <div key={s.tier} style={{flex:"1 1 auto",minWidth:80,background:C.bgCard,
+              borderRadius:7,border:`1px solid ${s.color}40`,borderTop:`3px solid ${s.color}`,
+              padding:"8px 10px"}}>
+              <div style={{display:"flex",alignItems:"baseline",gap:5,marginBottom:3}}>
+                <span style={{fontSize:9,fontWeight:800,color:s.color,fontFamily:mono}}>{s.tier}</span>
+                <span style={{fontSize:10,fontWeight:700,color:C.cream,lineHeight:1.2}}>{s.label}</span>
+              </div>
+              <div style={{fontSize:11,fontWeight:700,color:s.color,fontFamily:mono,marginBottom:3}}>{s.amt}</div>
+              <div style={{fontSize:9,color:C.creamDim,lineHeight:1.4}}>{s.note}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* PLAYER CARDS */}
+      <div style={{marginBottom:16}}>
+        <div style={{fontSize:9,color:C.creamDim,letterSpacing:"0.15em",textTransform:"uppercase",marginBottom:12,fontWeight:700}}>
+          The Players — Who They Are · What They Put In · What They Get Back · Where They Sit in the Waterfall
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:10}}>
+          {PLAYERS.map(p=>(
+            <div key={p.id} style={{background:C.bgCard,borderRadius:10,
+              border:`1px solid ${p.color}35`,borderLeft:`4px solid ${p.color}`,
+              padding:"14px 16px"}}>
+              {/* name row */}
+              <div style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:10}}>
+                <span style={{fontSize:20,lineHeight:1}}>{p.icon}</span>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:13,fontWeight:800,color:p.color,lineHeight:1.2}}>{p.name}</div>
+                  <div style={{fontSize:10,color:C.creamDim,marginTop:2}}>{p.role}</div>
+                  <div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:5}}>
+                    {p.tags.map(t=>(
+                      <span key={t} style={{fontSize:8,padding:"2px 6px",borderRadius:3,
+                        background:`${p.color}18`,color:p.color,border:`1px solid ${p.color}40`,
+                        fontFamily:mono,fontWeight:600}}>{t}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              {/* position */}
+              <div style={{background:`${p.color}10`,borderRadius:6,padding:"7px 10px",marginBottom:8,
+                border:`1px solid ${p.color}25`}}>
+                <div style={{fontSize:9,color:p.color,fontWeight:700,letterSpacing:"0.08em",
+                  textTransform:"uppercase",marginBottom:3}}>Position</div>
+                <div style={{fontSize:10,color:C.cream,lineHeight:1.5}}>{p.position}</div>
+              </div>
+              {/* puts in / gets back */}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7,marginBottom:7}}>
+                <div>
+                  <div style={{fontSize:8,color:C.creamDim,textTransform:"uppercase",letterSpacing:"0.08em",
+                    marginBottom:3,fontWeight:600}}>Puts In</div>
+                  <div style={{fontSize:10,color:C.creamDim,lineHeight:1.5}}>{p.puts}</div>
+                </div>
+                <div>
+                  <div style={{fontSize:8,color:p.color,textTransform:"uppercase",letterSpacing:"0.08em",
+                    marginBottom:3,fontWeight:600}}>Gets Back</div>
+                  <div style={{fontSize:10,color:C.cream,lineHeight:1.5}}>{p.gets}</div>
+                </div>
+              </div>
+              {/* waterfall */}
+              <div style={{borderTop:`1px solid ${C.border}`,paddingTop:6}}>
+                <div style={{fontSize:8,color:C.creamDim,textTransform:"uppercase",letterSpacing:"0.08em",
+                  marginBottom:2,fontWeight:600}}>Waterfall</div>
+                <div style={{fontSize:10,color:C.creamDim,lineHeight:1.5,fontStyle:"italic"}}>{p.waterfall}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* THREE ENTITIES */}
+      <div style={{marginBottom:24}}>
+        <div style={{fontSize:9,color:C.creamDim,letterSpacing:"0.15em",textTransform:"uppercase",marginBottom:10,fontWeight:700}}>
+          The Three Entities — One Purpose — PRT Covenants Bind All Three
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
+          {[
+            {color:C.gold,  icon:"⚙️", name:"Public Benefit Corp (PBC)",   sub:"Revenue Engine",
+              items:["Holds all operating revenue streams","60% investor + 20% community + 20% RDC","Nine-tier waterfall governs all distributions","Glamping · farm · film · cultural programs","Five Capitals dashboard reporting"]},
+            {color:C.teal,  icon:"🏛", name:"Stewardship Trust  501(c)(3)", sub:"Land Sovereign",
+              items:["Holds fee title in perpetuity","Issues conservation easement to LTSBC","Receives 5% PRT Covenant on gross revenue","Funded $4–5M from community raise at close","Governs via Five Capitals readiness gates"]},
+            {color:C.sage,  icon:"🏺", name:"Chumash Cultural Commons",     sub:"Multi-Tribal Co-Management",
+              items:["Irrevocable — runs with the land forever","Village sites Mikiw + Kuyamu returned Yr 1–2","TEK documentation + cultural program governance","Chumash Kitchen · NOAA sanctuary grants","Marine interface · ceremonial zone protection"]},
+          ].map((e,i)=>(
+            <div key={i} style={{background:C.bgCard,borderRadius:9,border:`1px solid ${e.color}40`,overflow:"hidden"}}>
+              <div style={{background:`${e.color}18`,borderBottom:`1px solid ${e.color}40`,
+                padding:"11px 14px",display:"flex",gap:9,alignItems:"center"}}>
+                <span style={{fontSize:18}}>{e.icon}</span>
+                <div>
+                  <div style={{fontSize:12,fontWeight:800,color:e.color}}>{e.name}</div>
+                  <div style={{fontSize:9,color:C.creamDim}}>{e.sub}</div>
+                </div>
+              </div>
+              <div style={{padding:"10px 14px"}}>
+                {e.items.map((item,j)=>(
+                  <div key={j} style={{display:"flex",gap:7,alignItems:"flex-start",marginBottom:5}}>
+                    <span style={{color:e.color,fontSize:10,marginTop:1,flexShrink:0}}>›</span>
+                    <span style={{fontSize:10,color:C.creamDim,lineHeight:1.5}}>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{background:`${C.forest}18`,border:`1px solid ${C.gold}30`,borderRadius:7,
+          padding:"9px 14px",marginTop:8,textAlign:"center"}}>
+          <span style={{fontSize:10,color:C.gold,fontWeight:700}}>PRT Covenant: </span>
+          <span style={{fontSize:10,color:C.creamDim}}>5% of gross PBC revenue flows to Stewardship Trust perpetually · Five Capitals reporting is non-waivable · No entity may act against conservation mission · All expansion requires Five Capitals readiness gate</span>
+        </div>
+      </div>
+
+      {/* ENTER MODEL */}
+      <div style={{textAlign:"center",paddingTop:16,borderTop:`1px solid ${C.border}`}}>
+        <button onClick={onEnter} style={{padding:"13px 36px",borderRadius:9,border:`2px solid ${C.gold}`,
+          background:`${C.gold}18`,color:C.gold,fontSize:13,fontWeight:700,cursor:"pointer",
+          fontFamily:sans,letterSpacing:"0.05em",transition:"all 0.18s"}}>
+          Open Financial Model  →
+        </button>
+        <div style={{fontSize:9,color:C.creamDim,marginTop:8}}>
+          DRAFT · CONFIDENTIAL · © 2026 Regenerative Development Corp · Not investment advice
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
+
+function WhatIfPage({purchasePrice,hbu,buyerTax}){
+  const [agi,       setAgi]    = useState(10e6);
+  const [invEquity, setInvEq]  = useState(22e6);
+  const [irr,       setIrr]    = useState(0.12);
+  const [taxRate,   setTax]    = useState(0.503);
+  const [noiFactor, setNoi]    = useState(1.0);
+  const [priorCFwd, setPrior]  = useState(0);
+  const [agiFactor, setAgiFac] = useState(0.60);
+  const YEARS=16;
+
+  const model=useMemo(()=>{
+    const notePmt   = 22e6*0.055;
+    const rdcMgmt   = 500e3;
+    const carryPmt  = 2.5e6*0.035;
+    const commPref  = 200*50e3;
+    const easVal    = Math.max(0,hbu-purchasePrice);
+    const annualDed = easVal/YEARS;
+    const agiCap    = agi*agiFactor;
+    const irrTarget = invEquity*irr;
+
+    const baseNOI=yr=>{
+      const b=yr===1?500e3:yr===2?1.2e6:yr===3?2.2e6:yr===4?3.0e6:yr===5?3.8e6:
+              yr<=8?4.5e6+(yr-5)*3e5:yr<=12?5.4e6+(yr-8)*2e5:6.2e6+(yr-12)*1.5e5;
+      return b*noiFactor;
+    };
+
+    let rows=[],cumInvTax=0,cumInvCash=0,cumComm=0,cumRDC=0,dedCarry=priorCFwd;
+
+    for(let yr=1;yr<=YEARS;yr++){
+      const gross  = baseNOI(yr);
+      const t15    = notePmt+rdcMgmt+(yr<=2?carryPmt:0)+gross*0.05;
+      const surplus= Math.max(0,gross-t15);
+
+      // tax deduction
+      const dedAvail = annualDed+dedCarry;
+      const dedUsed  = Math.min(dedAvail,agiCap);
+      dedCarry       = Math.max(0,dedAvail-dedUsed);
+      const taxSave  = dedUsed*taxRate;
+      cumInvTax     += taxSave;
+
+      // investor cash — zero Yrs 1-7; fills gap from Yr 8+
+      const cashNeeded = Math.max(0,irrTarget-taxSave);
+      const invCash    = yr<=7?0:Math.min(cashNeeded,surplus);
+      cumInvCash      += invCash;
+      const blendPct   = (taxSave+invCash)/invEquity;
+      const irrGap     = irrTarget-taxSave-invCash;
+
+      // community — starts Yr 8 or when investor is whole (simplified)
+      const commOn   = yr>=8;
+      const commCash = commOn?Math.min((surplus-invCash)*0.20,Math.max(0,commPref-cumComm)):0;
+      cumComm       += commCash;
+
+      // RDC
+      const rdcPromote = (cumComm>=commPref)?(surplus-invCash-commCash)*0.20:0;
+      cumRDC          += rdcMgmt+rdcPromote;
+
+      rows.push({yr,gross,t15,surplus,dedUsed,dedCarry,taxSave,
+        invCash,blendPct,irrGap,cumInvTax,cumInvCash,
+        trustDist:notePmt,rdcMgmt,stewTrust:gross*0.05,
+        commCash,cumComm,rdcPromote});
+    }
+
+    const tot=rows.reduce((a,r)=>({gross:a.gross+r.gross,taxSave:a.taxSave+r.taxSave,
+      invCash:a.invCash+r.invCash,trustDist:a.trustDist+r.trustDist,
+      rdcMgmt:a.rdcMgmt+r.rdcMgmt,stewTrust:a.stewTrust+r.stewTrust,
+      commCash:a.commCash+r.commCash,rdcPromote:a.rdcPromote+r.rdcPromote}),
+      {gross:0,taxSave:0,invCash:0,trustDist:0,rdcMgmt:0,stewTrust:0,commCash:0,rdcPromote:0});
+
+    return{rows,tot,easVal,annualDed,agiCap,irrTarget,
+      impliedIRR:(tot.taxSave+tot.invCash)/(invEquity*YEARS)};
+  },[agi,invEquity,irr,taxRate,noiFactor,priorCFwd,agiFactor,hbu,purchasePrice]);
+
+  const {rows,tot,easVal,annualDed,agiCap,irrTarget,impliedIRR}=model;
+
+  const TH=({ch,w,c=C.gold})=>(
+    <th style={{padding:"6px 8px",textAlign:"right",fontSize:9,letterSpacing:"0.07em",
+      textTransform:"uppercase",color:c,borderBottom:`2px solid ${C.border}`,
+      whiteSpace:"nowrap",background:C.bgMid,minWidth:w,fontFamily:mono,fontWeight:700}}>{ch}</th>);
+
+  const TD=({v,c=C.cream,bg,b})=>(
+    <td style={{padding:"5px 8px",textAlign:"right",fontSize:11,color:c,fontFamily:mono,
+      background:bg||"transparent",fontWeight:b?700:400,
+      borderBottom:`1px solid ${C.border}22`}}>{v}</td>);
+
+  const colGroups=[
+    {lbl:"OPERATIONS",cols:3,c:C.creamDim},
+    {lbl:"§170(h) TAX DEDUCTION",cols:3,c:C.teal},
+    {lbl:"INCOME TRUST",cols:1,c:C.coral},
+    {lbl:"INVESTOR",cols:3,c:C.sky},
+    {lbl:"RDC",cols:2,c:C.amber},
+    {lbl:"STEWARDSHIP",cols:1,c:C.sage},
+    {lbl:"COMMUNITY",cols:2,c:C.lavender},
+  ];
+
+  const negYrs=rows.filter(r=>r.surplus<0).map(r=>`Yr ${r.yr}`);
+
+  return(
+    <div style={{padding:"18px 22px",overflowY:"auto",height:"calc(100vh - 48px)"}}>
+      {/* header */}
+      <div style={{marginBottom:14}}>
+        <div style={{fontSize:9,color:C.gold,letterSpacing:"0.2em",textTransform:"uppercase",marginBottom:2}}>What-If Analysis</div>
+        <div style={{fontSize:17,fontWeight:800,fontFamily:serif,color:C.cream,marginBottom:3}}>
+          Tax Deductions · Cash Flows · Returns to All Parties — Year 1 to {YEARS}
+        </div>
+        <div style={{fontSize:10,color:C.creamDim}}>Adjust assumptions. Table updates live. Teal years = investor draws zero cash from PBC. Illustrative — not tax advice.</div>
+      </div>
+
+      {/* sliders */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:9,marginBottom:14}}>
+        {[
+          {label:"Investor Equity",val:invEquity,set:setInvEq,min:15e6,max:30e6,step:5e5,fmt:v=>fM(v,1),color:C.sky,    sub:"PBC founding units (60%)"},
+          {label:"Investor CA AGI", val:agi,      set:setAgi, min:3e6, max:20e6, step:5e5,fmt:v=>fM(v,1),color:C.teal,   sub:"Annual California AGI"},
+          {label:"AGI Limit",       val:agiFactor,set:setAgiFac,min:.3,max:1.0,step:.05,fmt:fP,          color:C.sage,   sub:"60% standard · 100% farmer"},
+          {label:"Blended IRR",     val:irr,      set:setIrr,  min:.08,max:.20, step:.005,fmt:fP,         color:C.gold,   sub:"Tax savings credited first"},
+          {label:"Tax Rate",        val:taxRate,  set:setTax,  min:.35,max:.58, step:.005,fmt:fP,         color:C.amber,  sub:"Fed + CA combined marginal"},
+          {label:"Prior Carryforward",val:priorCFwd,set:setPrior,min:0,max:20e6,step:5e5,fmt:v=>fM(v,1), color:C.coral,  sub:"§170(h) existing carryforward"},
+          {label:"NOI Scenario",    val:noiFactor,set:setNoi, min:.5,  max:1.5,  step:.05, fmt:v=>`${(v*100).toFixed(0)}%`,color:C.lavender,sub:"% of base case revenue"},
+        ].map(sl=>(
+          <div key={sl.label} style={{background:C.bgCard,borderRadius:8,padding:"9px 11px",border:`1px solid ${C.border}`}}>
+            <Slider {...sl}/>
+          </div>
+        ))}
+        {/* easement KPIs */}
+        <div style={{background:C.bgCard,borderRadius:8,padding:"9px 11px",border:`1px solid ${C.gold}40`}}>
+          <div style={{fontSize:9,color:C.gold,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:6,fontWeight:700}}>Easement</div>
+          {[
+            ["Value",fM(easVal,1),C.cream],
+            ["Ann. Deduction",fM(annualDed,1),C.teal],
+            ["AGI Cap /yr",fM(agiCap,1),C.teal],
+            ["IRR Target /yr",fM(irrTarget,2),C.gold],
+            ["16yr Implied IRR",fP(impliedIRR),impliedIRR>=irr?C.sage:C.coral],
+          ].map(([l,v,c])=>(
+            <div key={l} style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+              <span style={{fontSize:9,color:C.creamDim}}>{l}</span>
+              <span style={{fontSize:10,fontFamily:mono,fontWeight:700,color:c}}>{v}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* warning */}
+      {negYrs.length>0&&(
+        <div style={{background:`${C.coral}15`,border:`1px solid ${C.coral}50`,borderRadius:7,
+          padding:"8px 13px",marginBottom:11,fontSize:10,color:C.coral}}>
+          ⚠️ NOI below Tier 1–5 obligations in {negYrs.join(", ")} at {(noiFactor*100).toFixed(0)}% of base case — equity distributions suspend, obligations accrue.
+        </div>
+      )}
+
+      {/* table */}
+      <div style={{overflowX:"auto",borderRadius:9,border:`1px solid ${C.border}`}}>
+        <table style={{width:"100%",borderCollapse:"collapse"}}>
+          <thead>
+            {/* group row */}
+            <tr style={{background:C.bgLight}}>
+              <td style={{padding:"3px 10px",fontSize:8,borderBottom:`1px solid ${C.border}`,background:C.bgMid}}/>
+              {colGroups.map(({lbl,cols,c},i)=>(
+                <td key={i} colSpan={cols} style={{padding:"3px 6px",fontSize:8,color:c,textAlign:"center",
+                  fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",
+                  borderBottom:`1px solid ${C.border}`,borderLeft:`1px solid ${C.border}33`,background:C.bgLight}}>{lbl}</td>
+              ))}
+            </tr>
+            {/* header row */}
+            <tr>
+              <TH ch="YR" w={38} c={C.gold}/>
+              <TH ch="Gross NOI" w={80} c={C.creamDim}/><TH ch="T1–5" w={78} c={C.creamDim}/><TH ch="Surplus" w={74} c={C.sage}/>
+              <TH ch="Ded Used" w={78} c={C.teal}/><TH ch="Carry→" w={72} c={C.teal}/><TH ch="Tax Save" w={78} c={C.teal}/>
+              <TH ch="Note IO" w={74} c={C.coral}/>
+              <TH ch="Inv Cash" w={74} c={C.sky}/><TH ch="Blend%" w={68} c={C.sky}/><TH ch="vs Target" w={80} c={C.sky}/>
+              <TH ch="Mgmt Fee" w={74} c={C.amber}/><TH ch="Promote" w={72} c={C.amber}/>
+              <TH ch="5% Trust" w={74} c={C.sage}/>
+              <TH ch="Comm Dist" w={78} c={C.lavender}/><TH ch="Cum Comm" w={78} c={C.lavender}/>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(r=>{
+              const rowBg=r.surplus<0?`${C.coral}10`:r.yr<=7?`${C.teal}07`:"transparent";
+              const yrCol=r.yr<=7?C.teal:C.gold;
+              const sCol=r.surplus<0?C.coral:r.surplus>5e5?C.sage:C.cream;
+              const bCol=r.blendPct>=irr?C.sage:r.blendPct>=irr*0.75?C.amber:C.coral;
+              const gCol=r.irrGap<500?C.sage:r.irrGap<irrTarget*0.5?C.amber:C.coral;
+              const gStr=r.irrGap<500?"✓ on target":r.irrGap>0?`(${fD(r.irrGap)})`:`+${fD(Math.abs(r.irrGap))}`;
+              return(
+                <tr key={r.yr}>
+                  <td style={{padding:"5px 10px",fontSize:11,fontWeight:700,color:yrCol,fontFamily:mono,
+                    background:rowBg,borderBottom:`1px solid ${C.border}22`,textAlign:"center"}}>
+                    {r.yr}{r.yr<=7&&<span style={{fontSize:7,marginLeft:2}}>●</span>}
+                  </td>
+                  <TD v={fD(r.gross)}    c={C.cream}    bg={rowBg}/>
+                  <TD v={fD(r.t15)}     c={C.creamDim} bg={rowBg}/>
+                  <TD v={fD(r.surplus)} c={sCol}       bg={rowBg} b={r.surplus<0}/>
+                  <TD v={fD(r.dedUsed)} c={C.teal}     bg={rowBg}/>
+                  <TD v={r.dedCarry>1e3?fD(r.dedCarry):"—"} c={C.creamDim} bg={rowBg}/>
+                  <TD v={fD(r.taxSave)} c={C.teal}     bg={rowBg} b/>
+                  <TD v={fD(r.trustDist)} c={C.coral}  bg={rowBg}/>
+                  <TD v={r.invCash>0?fD(r.invCash):"—"} c={C.sky} bg={rowBg}/>
+                  <TD v={fP(r.blendPct)} c={bCol}      bg={rowBg} b/>
+                  <TD v={gStr}           c={gCol}       bg={rowBg}/>
+                  <TD v={fD(r.rdcMgmt)} c={C.amber}    bg={rowBg}/>
+                  <TD v={r.rdcPromote>0?fD(r.rdcPromote):"—"} c={C.amber} bg={rowBg}/>
+                  <TD v={fD(r.stewTrust)} c={C.sage}   bg={rowBg}/>
+                  <TD v={r.commCash>0?fD(r.commCash):"—"} c={C.lavender} bg={rowBg}/>
+                  <TD v={fD(r.cumComm)} c={r.cumComm>=10e6?C.sage:C.lavender} bg={rowBg}/>
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            <tr style={{background:C.bgMid,borderTop:`2px solid ${C.gold}60`}}>
+              <td style={{padding:"6px 10px",fontSize:10,fontWeight:700,color:C.gold,fontFamily:mono,textAlign:"center"}}>TOT</td>
+              <TD v={fM(tot.gross,1)}     c={C.cream}    bg={C.bgMid} b/>
+              <TD v=""                    c={C.creamDim} bg={C.bgMid}/>
+              <TD v=""                    c={C.sage}     bg={C.bgMid}/>
+              <TD v=""                    c={C.teal}     bg={C.bgMid}/>
+              <TD v=""                    c={C.creamDim} bg={C.bgMid}/>
+              <TD v={fM(tot.taxSave,1)}   c={C.teal}     bg={C.bgMid} b/>
+              <TD v={fM(tot.trustDist,1)} c={C.coral}    bg={C.bgMid} b/>
+              <TD v={fM(tot.invCash,1)}   c={C.sky}      bg={C.bgMid} b/>
+              <TD v={fP(impliedIRR)}      c={impliedIRR>=irr?C.sage:C.coral} bg={C.bgMid} b/>
+              <TD v=""                    c={C.sky}      bg={C.bgMid}/>
+              <TD v={fM(tot.rdcMgmt,1)}   c={C.amber}    bg={C.bgMid} b/>
+              <TD v={tot.rdcPromote>0?fM(tot.rdcPromote,1):"—"} c={C.amber} bg={C.bgMid} b/>
+              <TD v={fM(tot.stewTrust,1)} c={C.sage}     bg={C.bgMid} b/>
+              <TD v={fM(tot.commCash,1)}  c={C.lavender} bg={C.bgMid} b/>
+              <TD v={fM(tot.commCash,1)}  c={tot.commCash>=10e6?C.sage:C.lavender} bg={C.bgMid} b/>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      {/* legend */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginTop:12}}>
+        {[
+          [C.teal,    "Yrs 1–7 ●",     "Cash-protected. Investor draws zero from PBC regardless of NOI. Tax savings alone satisfy IRR in most scenarios."],
+          [C.sky,     "Blend %",        "Combined return (tax savings + cash) ÷ invested equity. Green = at/above target IRR. Amber = within 75%. Red = below."],
+          [C.coral,   "vs Target",      "Gap vs IRR target. Parentheses = shortfall. Shortfall accrues — does not trigger default or note acceleration."],
+          [C.lavender,"Community",      "Begins Yr 8 or when investor is whole. 1.67× preferred = $50K/unit × 200 members = $10M total before residual splits."],
+        ].map(([c,l,d],i)=>(
+          <div key={i} style={{background:C.bgCard,borderRadius:7,padding:"8px 10px",border:`1px solid ${c}30`,borderLeft:`3px solid ${c}`}}>
+            <div style={{fontSize:10,fontWeight:700,color:c,marginBottom:2}}>{l}</div>
+            <div style={{fontSize:9,color:C.creamDim,lineHeight:1.5}}>{d}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{marginTop:9,fontSize:9,color:C.creamDim,fontStyle:"italic"}}>
+        Tier 1–5 obligations = $22M note IO + $500K RDC mgmt + carry-back interest (Yr 1–2 only) + 5% PRT covenant on gross revenue. NOI base case drawn from Phased Model — use NOI Scenario slider to stress-test. All figures illustrative only.
+      </div>
+    </div>
+  );
+}
+
 // ═══ MAIN APP ═════════════════════════════════════════════════════════════════
 export default function App(){
-  const [isDark,setIsDark]=useState(()=>{
-    try{return localStorage.getItem("prt:theme")!=="light";}catch{return true;}
-  });
-  // Update module-level C so all components use correct theme
-  C = isDark ? DARK : LIGHT;
-  const toggleTheme=()=>{
-    setIsDark(d=>{
-      const next=!d;
-      try{localStorage.setItem("prt:theme",next?"dark":"light");}catch{}
-      return next;
-    });
-  };
-  const [view,setView]=useState("model");
+  const [view,setView]=useState("cover");
   const [settings,setSettings]=useState(DEFAULT_SETTINGS);
   const [loaded,setLoaded]=useState(false);
   const [scenarios,setScenarios]=useState([]);
@@ -471,11 +912,6 @@ export default function App(){
 
   const mult={"low":0,"mid":.5,"high":1}[scenario];
   const S=settings;
-
-  // Sync body background with theme
-  useEffect(()=>{
-    document.body.style.background = isDark ? DARK.bg : LIGHT.bg;
-  },[isDark]);
 
   // LOAD
   useEffect(()=>{(async()=>{
@@ -640,7 +1076,7 @@ export default function App(){
           <div style={{fontSize:15,fontWeight:800,fontFamily:serif,letterSpacing:"-0.01em",color:C.cream}}>{S.projectName} · Phased ROI & Five Capitals</div>
         </div>
         <div style={{display:"flex",gap:2,background:C.bgLight,borderRadius:6,padding:3}}>
-          {[["model","📊 Model"],["settings","⚙️ Settings"],["scenarios",`💾 Scenarios${scenarios.length>0?" ("+scenarios.length+")":""}`]].map(([k,l])=>(
+          {[["cover","🏛 Overview"],["model","📊 Model"],["whatif","🔬 What-If"],["settings","⚙️ Settings"],["scenarios",`💾 Scenarios${scenarios.length>0?" ("+scenarios.length+")":""}`]].map(([k,l])=>(
             <button key={k} onClick={()=>setView(k)} style={{padding:"5px 11px",borderRadius:4,border:"none",cursor:"pointer",
               background:view===k?C.bgCard:"transparent",color:view===k?C.cream:C.creamDim,fontSize:11,fontWeight:view===k?700:400,whiteSpace:"nowrap"}}>{l}</button>
           ))}
@@ -652,20 +1088,16 @@ export default function App(){
             border:`1px solid ${scenario===k?C.gold:C.border}`,background:scenario===k?`${C.gold}20`:"transparent",
             color:scenario===k?C.gold:C.creamDim,fontSize:11,fontWeight:scenario===k?700:400,cursor:"pointer"}}>{l}</button>
         ))}
-        <button onClick={toggleTheme} title="Toggle light/dark mode" style={{
-          padding:"4px 9px",borderRadius:5,border:`1px solid ${C.border}`,
-          background:C.bgLight,color:C.cream,cursor:"pointer",fontSize:13,lineHeight:1,
-          transition:"all 0.2s"}}>
-          {isDark?"☀️":"🌙"}
-        </button>
         <span style={{fontSize:9,color:saveFlash?C.sage:C.creamDim,fontFamily:mono,transition:"color 0.5s",marginLeft:4}}>
           {saveFlash?"● saved":"○ auto-save"}
         </span>
       </div>
     </div>
 
+    {view==="cover"&&<CoverPage onEnter={()=>setView("model")}/>}
     {view==="settings"&&<div style={{overflowY:"auto",height:"calc(100vh - 48px)"}}><SettingsPage settings={S} setSettings={setSettings} onClose={()=>setView("model")}/></div>}
     {view==="scenarios"&&<div style={{overflowY:"auto",height:"calc(100vh - 48px)"}}><ScenariosPage scenarios={scenarios} onSave={saveScenario} onLoad={loadScenario} onDelete={delScenario} onClose={()=>setView("model")}/></div>}
+    {view==="whatif"&&<WhatIfPage purchasePrice={purchasePrice} hbu={hbu} buyerTax={buyerTax}/>}
 
     {view==="model"&&<div style={{display:"grid",gridTemplateColumns:"282px 1fr 302px",minHeight:"calc(100vh - 48px)"}}>
 
@@ -934,5 +1366,15 @@ export default function App(){
       <div style={{fontSize:9,color:C.creamDim}}>DRAFT — CONFIDENTIAL — © 2026 Regenerative Development Corp · Not investment advice · Settings + scenarios stored locally</div>
       <div style={{fontSize:9,color:C.gold,fontStyle:"italic"}}>Life before Profits.</div>
     </div>
+
+    <style>{`
+      @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700;800&family=DM+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800&display=swap');
+      *{box-sizing:border-box;}
+      ::-webkit-scrollbar{width:4px;} ::-webkit-scrollbar-track{background:#0A1520;} ::-webkit-scrollbar-thumb{background:#1E3A54;border-radius:4px;}
+      input[type=range]{-webkit-appearance:none;width:100%;background:transparent;}
+      input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#C9A84C;cursor:pointer;margin-top:-4px;}
+      input[type=range]::-webkit-slider-runnable-track{height:4px;background:transparent;}
+      input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:#C9A84C;cursor:pointer;border:none;}
+    `}</style>
   </div>);
 }
