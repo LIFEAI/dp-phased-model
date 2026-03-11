@@ -93,13 +93,98 @@ const PHASE_META={
 const SK_SETTINGS ="prt:settings:v1";
 const SK_SESSION  ="prt:session:dos-pueblos:v1";
 const SK_SCENARIOS="prt:scenarios:dos-pueblos:v1";
+const SK_LAST_MODEL="prt:last-model:v1";
 
-async function sGet(key,fb){try{const r=await window.storage.get(key);return r?JSON.parse(r.value):fb;}catch{return fb;}}
-async function sSet(key,val){try{await window.storage.set(key,JSON.stringify(val));}catch{}}
+// Storage layer — localStorage for deployed app (window.storage is Claude-artifact-only)
+async function sGet(key,fb){
+  try{
+    const v=localStorage.getItem(key);
+    return v?JSON.parse(v):fb;
+  }catch{return fb;}
+}
+async function sSet(key,val){
+  try{localStorage.setItem(key,JSON.stringify(val));}catch{}
+}
 
 const sRev=(s,m,yr)=>{const lo=yr===1?s.yr1Lo:s.yr3Lo,hi=yr===1?s.yr1Hi:s.yr3Hi;return lo+(hi-lo)*m;};
 
-// ─── SMALL UI ────────────────────────────────────────────────────────────────
+// ─── CANONICAL MODELS ─────────────────────────────────────────────────────────
+// These are the shared named model presets. Anyone can load them.
+// To add a new canonical model: add an entry here and redeploy.
+// Personal saved scenarios live in localStorage per-browser.
+const CANONICAL_MODELS=[
+  {
+    id:"base",
+    name:"Base Case",
+    description:"Mid-point assumptions. All P1 streams active. No development capex.",
+    badge:"●",badgeColor:"#C9A84C",
+    state:{
+      scenario:"mid",
+      activePhases:{p1:true,p2:false,p3:false},
+      activeStreams:Object.fromEntries(STREAM_DEFS.map(s=>[s.id,s.on])),
+      purchasePrice:62e6,hbu:133e6,buyerTax:0.37,sellerNote:22e6,
+      occ:0.65,parcelSale:2e6,
+      unitTypes:{reno:{enabled:false,count:3,rate:250,costPerUnit:100e3},namu_std:{enabled:false,count:8,rate:320},namu_prem:{enabled:false,count:4,rate:520}},
+    },
+  },
+  {
+    id:"conservative",
+    name:"Conservative",
+    description:"Low-end revenue assumptions. P1 only. Stress-test scenario for lenders.",
+    badge:"▼",badgeColor:"#D96845",
+    state:{
+      scenario:"low",
+      activePhases:{p1:true,p2:false,p3:false},
+      activeStreams:Object.fromEntries(STREAM_DEFS.map(s=>[s.id,s.on])),
+      purchasePrice:65e6,hbu:120e6,buyerTax:0.37,sellerNote:22e6,
+      occ:0.55,parcelSale:2e6,
+      unitTypes:{reno:{enabled:false,count:3,rate:250,costPerUnit:100e3},namu_std:{enabled:false,count:8,rate:320},namu_prem:{enabled:false,count:4,rate:520}},
+    },
+  },
+  {
+    id:"full-build",
+    name:"Full Build — P1+P2+P3",
+    description:"All three phases active. Eco-lodge + conservation finance stacked.",
+    badge:"▲",badgeColor:"#29AFA0",
+    state:{
+      scenario:"mid",
+      activePhases:{p1:true,p2:true,p3:true},
+      activeStreams:Object.fromEntries(STREAM_DEFS.map(s=>[s.id,true])),
+      purchasePrice:62e6,hbu:133e6,buyerTax:0.37,sellerNote:22e6,
+      occ:0.70,parcelSale:3e6,
+      unitTypes:{reno:{enabled:true,count:4,rate:275,costPerUnit:100e3},namu_std:{enabled:true,count:10,rate:320},namu_prem:{enabled:true,count:4,rate:550}},
+    },
+  },
+  {
+    id:"roger-ask",
+    name:"Roger Ask — $65M",
+    description:"Seller's listed price. Conservative on easement. P1 only.",
+    badge:"R",badgeColor:"#8A7EC8",
+    state:{
+      scenario:"mid",
+      activePhases:{p1:true,p2:false,p3:false},
+      activeStreams:Object.fromEntries(STREAM_DEFS.map(s=>[s.id,s.on])),
+      purchasePrice:65e6,hbu:115e6,buyerTax:0.37,sellerNote:22e6,
+      occ:0.65,parcelSale:2e6,
+      unitTypes:{reno:{enabled:false,count:3,rate:250,costPerUnit:100e3},namu_std:{enabled:false,count:8,rate:320},namu_prem:{enabled:false,count:4,rate:520}},
+    },
+  },
+  {
+    id:"nctc-offer",
+    name:"NCTC Offer — $62M",
+    description:"NCTC negotiated price. HBU at $133M. Full easement deduction stack.",
+    badge:"N",badgeColor:"#7BAE7F",
+    state:{
+      scenario:"high",
+      activePhases:{p1:true,p2:false,p3:true},
+      activeStreams:Object.fromEntries(STREAM_DEFS.map(s=>[s.id,s.on||s.phase==="p3"])),
+      purchasePrice:62e6,hbu:133e6,buyerTax:0.37,sellerNote:22e6,
+      occ:0.65,parcelSale:3e6,
+      unitTypes:{reno:{enabled:false,count:3,rate:250,costPerUnit:100e3},namu_std:{enabled:false,count:8,rate:320},namu_prem:{enabled:false,count:4,rate:520}},
+    },
+  },
+];
+
 function Slider({label,val,set,min,max,step,fmt,sub,color=C.gold,disabled}){
   const pct=((val-min)/(max-min))*100;
   return(<div style={{marginBottom:13,opacity:disabled?0.4:1}}>
@@ -385,7 +470,8 @@ function ScenariosPage({scenarios,onSave,onLoad,onDelete,onClose}){
 }
 
 // ═══ COVER PAGE ══════════════════════════════════════════════════════════════
-function CoverPage({onEnter}){
+function CoverPage({onEnter,onLoadModel,lastModelId}){
+  const [selectedModel,setSelectedModel]=useState(lastModelId||"base");
 
   const PLAYERS=[
     {
@@ -634,14 +720,67 @@ function CoverPage({onEnter}){
         </div>
       </div>
 
-      {/* ENTER MODEL */}
-      <div style={{textAlign:"center",paddingTop:16,borderTop:`1px solid ${C.border}`}}>
-        <button onClick={onEnter} style={{padding:"13px 36px",borderRadius:9,border:`2px solid ${C.gold}`,
-          background:`${C.gold}18`,color:C.gold,fontSize:13,fontWeight:700,cursor:"pointer",
-          fontFamily:sans,letterSpacing:"0.05em",transition:"all 0.18s"}}>
-          Open Financial Model  →
-        </button>
-        <div style={{fontSize:10,color:C.mist,marginTop:8}}>
+      {/* MODEL PICKER */}
+      <div style={{paddingTop:20,borderTop:`1px solid ${C.border}`}}>
+        <div style={{fontSize:10,color:C.mist,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:12,fontWeight:700}}>
+          Load a Model — Select a canonical scenario or continue where you left off
+        </div>
+        {/* Model cards */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8,marginBottom:16}}>
+          {CANONICAL_MODELS.map(m=>{
+            const sel=selectedModel===m.id;
+            return(
+              <button key={m.id} onClick={()=>setSelectedModel(m.id)}
+                style={{background:sel?`${m.badgeColor}15`:C.bgCard,border:`2px solid ${sel?m.badgeColor:C.border}`,
+                  borderRadius:9,padding:"11px 12px",cursor:"pointer",textAlign:"left",transition:"all 0.15s"}}>
+                <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:6}}>
+                  <div style={{width:22,height:22,borderRadius:5,background:`${m.badgeColor}25`,border:`1px solid ${m.badgeColor}60`,
+                    display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:m.badgeColor,flexShrink:0}}>
+                    {m.badge}
+                  </div>
+                  <div style={{fontSize:11,fontWeight:sel?800:600,color:sel?m.badgeColor:C.cream,lineHeight:1.2}}>{m.name}</div>
+                </div>
+                <div style={{fontSize:10,color:C.creamDim,lineHeight:1.5}}>{m.description}</div>
+                {/* quick tags */}
+                <div style={{display:"flex",gap:3,flexWrap:"wrap",marginTop:6}}>
+                  {Object.entries(m.state.activePhases).filter(([,v])=>v).map(([k])=>(
+                    <span key={k} style={{fontSize:8,padding:"1px 5px",borderRadius:3,
+                      background:`${m.badgeColor}20`,color:m.badgeColor,border:`1px solid ${m.badgeColor}40`,fontFamily:mono}}>
+                      {k.toUpperCase()}
+                    </span>
+                  ))}
+                  <span style={{fontSize:8,padding:"1px 5px",borderRadius:3,
+                    background:`${C.gold}15`,color:C.gold,border:`1px solid ${C.gold}30`,fontFamily:mono}}>
+                    {{low:"Conservative",mid:"Base Case",high:"Upside"}[m.state.scenario]}
+                  </span>
+                  <span style={{fontSize:8,padding:"1px 5px",borderRadius:3,
+                    background:`${C.teal}15`,color:C.teal,border:`1px solid ${C.teal}30`,fontFamily:mono}}>
+                    ${(m.state.purchasePrice/1e6).toFixed(0)}M
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        {/* Action row */}
+        <div style={{display:"flex",alignItems:"center",gap:12,justifyContent:"center"}}>
+          <button
+            onClick={()=>{
+              const m=CANONICAL_MODELS.find(x=>x.id===selectedModel)||CANONICAL_MODELS[0];
+              onLoadModel(m);
+            }}
+            style={{padding:"12px 32px",borderRadius:9,border:`2px solid ${C.gold}`,
+              background:`${C.gold}20`,color:C.gold,fontSize:13,fontWeight:700,cursor:"pointer",
+              fontFamily:sans,letterSpacing:"0.05em"}}>
+            Load "{CANONICAL_MODELS.find(m=>m.id===selectedModel)?.name}" →
+          </button>
+          <button onClick={onEnter}
+            style={{padding:"12px 20px",borderRadius:9,border:`1px solid ${C.border}`,
+              background:"transparent",color:C.creamDim,fontSize:12,cursor:"pointer",fontFamily:sans}}>
+            Continue last session →
+          </button>
+        </div>
+        <div style={{textAlign:"center",fontSize:10,color:C.mist,marginTop:10}}>
           DRAFT · CONFIDENTIAL · © 2026 Regenerative Development Corp · Not investment advice
         </div>
       </div>
@@ -660,6 +799,14 @@ function WhatIfPage({purchasePrice,hbu,buyerTax,settings:WS,modelNoi}){
   const [priorCFwd, setPrior]  = useState(0);
   const [agiFactor, setAgiFac] = useState(0.60);
   const YEARS=16;
+
+  // Re-sync from settings/model props when they change (e.g. after Settings save or model load)
+  useEffect(()=>{
+    if(WS?.defaultSellerFinance) setInvEq(WS.defaultSellerFinance);
+    if(WS?.defaultBuyerTaxRate)  setTax(Math.min(WS.defaultBuyerTaxRate+0.133, 0.58)); // fed+CA combined
+    // reset noiFactor to 1.0 on model reload
+    setNoi(1.0);
+  },[WS?.defaultSellerFinance, WS?.defaultBuyerTaxRate]);
 
   // Anchor NOI from model if available, else fall back to hardcoded schedule
   const anchorNoi = modelNoi && modelNoi > 0 ? modelNoi : 2.2e6;
@@ -950,7 +1097,9 @@ export default function App(){
     const sv=await sGet(SK_SETTINGS,DEFAULT_SETTINGS);
     const ss=await sGet(SK_SESSION,null);
     const sc=await sGet(SK_SCENARIOS,[]);
+    const lm=await sGet(SK_LAST_MODEL,"base");
     setSettings({...DEFAULT_SETTINGS,...sv});
+    setLastModelId(lm||"base");
     if(ss){
       try{
         if(ss.scenario)      setScenario(ss.scenario);
@@ -1069,12 +1218,32 @@ export default function App(){
       radarData:CAPITALS.map(c=>({subject:c.key,score:scores[c.key],fullMark:10}))};
   },[activePhases,activeStreams,scenario,purchasePrice,hbu,buyerTax,sellerNote,unitTypes,occ,parcelSale,mult,S]);
 
+  const [lastModelId,setLastModelId]=useState("base");
+
   // ── SYNC: when Settings saves, push deal params back into model slider state ──
   const applySettingsToModel = useCallback((s)=>{
     setPP(s.defaultPurchasePrice);
     setHbu(s.defaultHBU);
     setBuyerTax(s.defaultBuyerTaxRate);
     setNote(s.defaultSellerFinance);
+  },[]);
+
+  // ── LOAD CANONICAL MODEL ───────────────────────────────────────────────────
+  const loadCanonicalModel = useCallback((m)=>{
+    const ss=m.state;
+    setScenario(ss.scenario);
+    setActivePhases(ss.activePhases);
+    setActiveStreams(ss.activeStreams);
+    setPP(ss.purchasePrice);
+    setHbu(ss.hbu);
+    setBuyerTax(ss.buyerTax);
+    setNote(ss.sellerNote);
+    setUnitTypes(ss.unitTypes);
+    setOcc(ss.occ);
+    setParcelSale(ss.parcelSale);
+    setLastModelId(m.id);
+    sSet(SK_LAST_MODEL,m.id);
+    setView("model");
   },[]);
   const togglePhase=pid=>setActivePhases(p=>({...p,[pid]:!p[pid]}));
   const toggleStream=(id,v)=>setActiveStreams(p=>({...p,[id]:v}));
@@ -1138,7 +1307,7 @@ export default function App(){
       </div>
     </div>
 
-    {view==="cover"&&<CoverPage onEnter={()=>setView("model")}/>}
+    {view==="cover"&&<CoverPage onEnter={()=>setView("model")} onLoadModel={loadCanonicalModel} lastModelId={lastModelId}/>}
     {view==="settings"&&<div style={{overflowY:"auto",height:"calc(100vh - 48px)"}}><SettingsPage settings={S} setSettings={setSettings} onClose={()=>setView("model")} onApply={applySettingsToModel}/></div>}
     {view==="scenarios"&&<div style={{overflowY:"auto",height:"calc(100vh - 48px)"}}><ScenariosPage scenarios={scenarios} onSave={saveScenario} onLoad={loadScenario} onDelete={delScenario} onClose={()=>setView("model")}/></div>}
     {view==="whatif"&&<WhatIfPage purchasePrice={purchasePrice} hbu={hbu} buyerTax={buyerTax} settings={S} modelNoi={calc.noi3}/>}
