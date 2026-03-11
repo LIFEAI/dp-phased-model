@@ -1204,6 +1204,7 @@ export default function App(){
 
   const mult={"low":0,"mid":.5,"high":1}[scenario];
   const S=settings;
+  const anyP=Object.values(activePhases).some(Boolean);
 
   // LOAD
   useEffect(()=>{(async()=>{
