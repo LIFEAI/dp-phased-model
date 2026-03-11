@@ -261,8 +261,9 @@ function SettBox({title,color=C.gold,children}){
   </div>);
 }
 
-function SettingsPage({settings:S,setSettings,onClose}){
+function SettingsPage({settings:S,setSettings,onClose,onApply}){
   const set=(k,v)=>setSettings(p=>({...p,[k]:v}));
+  const saveAndReturn=()=>{if(onApply)onApply(S);onClose();};
   return(<div style={{padding:"20px 24px",maxWidth:900,margin:"0 auto"}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:22}}>
       <div>
@@ -270,7 +271,7 @@ function SettingsPage({settings:S,setSettings,onClose}){
         <div style={{fontSize:18,fontWeight:800,fontFamily:serif,color:C.cream}}>Settings — {S.projectName}</div>
         <div style={{fontSize:11,color:C.creamDim,marginTop:3}}>Saved locally · reusable across PRT project artifacts</div>
       </div>
-      <button onClick={onClose} style={{padding:"8px 18px",borderRadius:7,border:`1px solid ${C.gold}`,background:`${C.gold}20`,color:C.gold,cursor:"pointer",fontWeight:700,fontSize:12}}>← Back to Model</button>
+      <button onClick={saveAndReturn} style={{padding:"8px 18px",borderRadius:7,border:`1px solid ${C.gold}`,background:`${C.gold}20`,color:C.gold,cursor:"pointer",fontWeight:700,fontSize:12}}>← Back to Model</button>
     </div>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:24}}>
       <div>
@@ -330,7 +331,7 @@ function SettingsPage({settings:S,setSettings,onClose}){
       <div style={{fontSize:10,color:C.creamDim}}>Settings auto-saved to local storage · reusable across PRT project artifacts</div>
       <div style={{display:"flex",gap:10}}>
         <button onClick={()=>setSettings(DEFAULT_SETTINGS)} style={{padding:"7px 16px",borderRadius:6,border:`1px solid ${C.coral}`,background:"transparent",color:C.coral,cursor:"pointer",fontSize:11}}>Reset to Defaults</button>
-        <button onClick={onClose} style={{padding:"7px 18px",borderRadius:6,border:`1px solid ${C.gold}`,background:`${C.gold}20`,color:C.gold,cursor:"pointer",fontWeight:700,fontSize:12}}>Save & Return</button>
+        <button onClick={saveAndReturn} style={{padding:"7px 18px",borderRadius:6,border:`1px solid ${C.gold}`,background:`${C.gold}20`,color:C.gold,cursor:"pointer",fontWeight:700,fontSize:12}}>Save & Return</button>
       </div>
     </div>
   </div>);
@@ -650,9 +651,9 @@ function CoverPage({onEnter}){
 }
 
 
-function WhatIfPage({purchasePrice,hbu,buyerTax}){
+function WhatIfPage({purchasePrice,hbu,buyerTax,settings:WS,modelNoi}){
   const [agi,       setAgi]    = useState(10e6);
-  const [invEquity, setInvEq]  = useState(22e6);
+  const [invEquity, setInvEq]  = useState(WS?.defaultSellerFinance||22e6);
   const [irr,       setIrr]    = useState(0.12);
   const [taxRate,   setTax]    = useState(0.503);
   const [noiFactor, setNoi]    = useState(1.0);
@@ -660,19 +661,28 @@ function WhatIfPage({purchasePrice,hbu,buyerTax}){
   const [agiFactor, setAgiFac] = useState(0.60);
   const YEARS=16;
 
+  // Anchor NOI from model if available, else fall back to hardcoded schedule
+  const anchorNoi = modelNoi && modelNoi > 0 ? modelNoi : 2.2e6;
+
   const model=useMemo(()=>{
-    const notePmt   = 22e6*0.055;
+    // Use settings-driven rates when available
+    const noteRate = WS?.noteInterestRate || 0.055;
+    const notePrincipal = WS?.defaultSellerFinance || 22e6;
+    const notePmt   = notePrincipal*noteRate;
     const rdcMgmt   = 500e3;
-    const carryPmt  = 2.5e6*0.035;
+    const carryPmt  = (WS?.defaultSellerFinance||22e6)*0.035;
     const commPref  = 200*50e3;
     const easVal    = Math.max(0,hbu-purchasePrice);
     const annualDed = easVal/YEARS;
     const agiCap    = agi*agiFactor;
     const irrTarget = invEquity*irr;
 
+    // NOI schedule anchored to the model's actual Yr3 NOI, not hardcoded values
+    // Yr1 ≈ 23% of Yr3, Yr2 ≈ 55%, Yr3 = 100%, ramps to ~2.8× by Yr16
     const baseNOI=yr=>{
-      const b=yr===1?500e3:yr===2?1.2e6:yr===3?2.2e6:yr===4?3.0e6:yr===5?3.8e6:
-              yr<=8?4.5e6+(yr-5)*3e5:yr<=12?5.4e6+(yr-8)*2e5:6.2e6+(yr-12)*1.5e5;
+      const a=anchorNoi;
+      const b=yr===1?a*0.23:yr===2?a*0.55:yr===3?a:yr===4?a*1.36:yr===5?a*1.73:
+              yr<=8?a*2.05+(yr-5)*a*0.14:yr<=12?a*2.45+(yr-8)*a*0.09:a*2.82+(yr-12)*a*0.068;
       return b*noiFactor;
     };
 
@@ -720,7 +730,7 @@ function WhatIfPage({purchasePrice,hbu,buyerTax}){
 
     return{rows,tot,easVal,annualDed,agiCap,irrTarget,
       impliedIRR:(tot.taxSave+tot.invCash)/(invEquity*YEARS)};
-  },[agi,invEquity,irr,taxRate,noiFactor,priorCFwd,agiFactor,hbu,purchasePrice]);
+  },[agi,invEquity,irr,taxRate,noiFactor,priorCFwd,agiFactor,hbu,purchasePrice,anchorNoi,WS]);
 
   const {rows,tot,easVal,annualDed,agiCap,irrTarget,impliedIRR}=model;
 
@@ -754,7 +764,9 @@ function WhatIfPage({purchasePrice,hbu,buyerTax}){
         <div style={{fontSize:17,fontWeight:800,fontFamily:serif,color:C.cream,marginBottom:3}}>
           Tax Deductions · Cash Flows · Returns to All Parties — Year 1 to {YEARS}
         </div>
-        <div style={{fontSize:11,color:C.mist}}>Adjust assumptions. Table updates live. Teal years = investor draws zero cash from PBC. Illustrative — not tax advice.</div>
+        <div style={{fontSize:11,color:C.mist}}>Adjust assumptions. Table updates live. Teal years = investor draws zero cash from PBC. Illustrative — not tax advice.{" "}
+          <span style={{color:C.teal,fontFamily:mono}}>NOI basis: {fM(anchorNoi,2)} (Yr3 from Model{modelNoi>0?" — live":"" })</span>
+        </div>
       </div>
 
       {/* sliders */}
@@ -1057,7 +1069,13 @@ export default function App(){
       radarData:CAPITALS.map(c=>({subject:c.key,score:scores[c.key],fullMark:10}))};
   },[activePhases,activeStreams,scenario,purchasePrice,hbu,buyerTax,sellerNote,unitTypes,occ,parcelSale,mult,S]);
 
-  const anyP=Object.values(activePhases).some(Boolean);
+  // ── SYNC: when Settings saves, push deal params back into model slider state ──
+  const applySettingsToModel = useCallback((s)=>{
+    setPP(s.defaultPurchasePrice);
+    setHbu(s.defaultHBU);
+    setBuyerTax(s.defaultBuyerTaxRate);
+    setNote(s.defaultSellerFinance);
+  },[]);
   const togglePhase=pid=>setActivePhases(p=>({...p,[pid]:!p[pid]}));
   const toggleStream=(id,v)=>setActiveStreams(p=>({...p,[id]:v}));
 
@@ -1121,9 +1139,9 @@ export default function App(){
     </div>
 
     {view==="cover"&&<CoverPage onEnter={()=>setView("model")}/>}
-    {view==="settings"&&<div style={{overflowY:"auto",height:"calc(100vh - 48px)"}}><SettingsPage settings={S} setSettings={setSettings} onClose={()=>setView("model")}/></div>}
+    {view==="settings"&&<div style={{overflowY:"auto",height:"calc(100vh - 48px)"}}><SettingsPage settings={S} setSettings={setSettings} onClose={()=>setView("model")} onApply={applySettingsToModel}/></div>}
     {view==="scenarios"&&<div style={{overflowY:"auto",height:"calc(100vh - 48px)"}}><ScenariosPage scenarios={scenarios} onSave={saveScenario} onLoad={loadScenario} onDelete={delScenario} onClose={()=>setView("model")}/></div>}
-    {view==="whatif"&&<WhatIfPage purchasePrice={purchasePrice} hbu={hbu} buyerTax={buyerTax}/>}
+    {view==="whatif"&&<WhatIfPage purchasePrice={purchasePrice} hbu={hbu} buyerTax={buyerTax} settings={S} modelNoi={calc.noi3}/>}
 
     {view==="model"&&<div style={{display:"grid",gridTemplateColumns:"282px 1fr 302px",minHeight:"calc(100vh - 48px)"}}>
 
