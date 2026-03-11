@@ -90,10 +90,11 @@ const PHASE_META={
   p3:{label:"Phase III",sublabel:"Conservation Finance",    color:C.p3,desc:"Stack public + private conservation revenue streams."},
 };
 
-const SK_SETTINGS ="prt:settings:v1";
-const SK_SESSION  ="prt:session:dos-pueblos:v1";
-const SK_SCENARIOS="prt:scenarios:dos-pueblos:v1";
-const SK_LAST_MODEL="prt:last-model:v1";
+const SK_SETTINGS   ="prt:settings:v1";
+const SK_SESSION    ="prt:session:dos-pueblos:v1";
+const SK_SCENARIOS  ="prt:scenarios:dos-pueblos:v1";
+const SK_LAST_MODEL ="prt:last-model:v1";
+const SK_USER_PRESETS="prt:user-presets:v1";
 
 // Storage layer — localStorage for deployed app (window.storage is Claude-artifact-only)
 async function sGet(key,fb){
@@ -470,8 +471,9 @@ function ScenariosPage({scenarios,onSave,onLoad,onDelete,onClose}){
 }
 
 // ═══ COVER PAGE ══════════════════════════════════════════════════════════════
-function CoverPage({onEnter,onLoadModel,lastModelId}){
+function CoverPage({onEnter,onLoadModel,lastModelId,userPresets,onDeletePreset}){
   const [selectedModel,setSelectedModel]=useState(lastModelId||"base");
+  const allModels=[...CANONICAL_MODELS,...(userPresets||[])];
 
   const PLAYERS=[
     {
@@ -725,8 +727,8 @@ function CoverPage({onEnter,onLoadModel,lastModelId}){
         <div style={{fontSize:10,color:C.mist,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:12,fontWeight:700}}>
           Load a Model — Select a canonical scenario or continue where you left off
         </div>
-        {/* Model cards */}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8,marginBottom:16}}>
+        {/* Canonical model cards */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8,marginBottom:userPresets?.length>0?10:16}}>
           {CANONICAL_MODELS.map(m=>{
             const sel=selectedModel===m.id;
             return(
@@ -762,17 +764,53 @@ function CoverPage({onEnter,onLoadModel,lastModelId}){
             );
           })}
         </div>
+        {/* User-saved presets */}
+        {userPresets?.length>0&&<div style={{marginBottom:16}}>
+          <div style={{fontSize:9,color:C.lavender,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:8}}>
+            ★ My Saved Presets — from What-If
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8}}>
+            {userPresets.map(m=>{
+              const sel=selectedModel===m.id;
+              return(
+                <button key={m.id} onClick={()=>setSelectedModel(m.id)}
+                  style={{background:sel?`${m.badgeColor}15`:C.bgCard,border:`2px solid ${sel?m.badgeColor:C.border}`,
+                    borderRadius:9,padding:"10px 12px",cursor:"pointer",textAlign:"left",transition:"all 0.15s",position:"relative"}}>
+                  <button
+                    onClick={e=>{e.stopPropagation();onDeletePreset(m.id);if(selectedModel===m.id)setSelectedModel("base");}}
+                    style={{position:"absolute",top:5,right:6,background:"transparent",border:"none",
+                      color:C.coral,cursor:"pointer",fontSize:11,lineHeight:1,padding:2}}>✕</button>
+                  <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:5}}>
+                    <div style={{width:18,height:18,borderRadius:4,background:`${m.badgeColor}25`,border:`1px solid ${m.badgeColor}60`,
+                      display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:m.badgeColor,flexShrink:0}}>★</div>
+                    <div style={{fontSize:11,fontWeight:sel?800:600,color:sel?m.badgeColor:C.cream,lineHeight:1.2,paddingRight:14}}>{m.name}</div>
+                  </div>
+                  <div style={{fontSize:9,color:C.creamDim,lineHeight:1.4,marginBottom:4}}>{m.description}</div>
+                  {m.savedAt&&<div style={{fontSize:8,color:C.mist,fontFamily:mono}}>Saved {m.savedAt}</div>}
+                  <div style={{display:"flex",gap:3,flexWrap:"wrap",marginTop:4}}>
+                    <span style={{fontSize:8,padding:"1px 5px",borderRadius:3,
+                      background:`${C.lavender}20`,color:C.lavender,border:`1px solid ${C.lavender}40`,fontFamily:mono}}>What-If</span>
+                    <span style={{fontSize:8,padding:"1px 5px",borderRadius:3,
+                      background:`${C.gold}15`,color:C.gold,border:`1px solid ${C.gold}30`,fontFamily:mono}}>
+                      ${(m.state.purchasePrice/1e6).toFixed(0)}M
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>}
         {/* Action row */}
         <div style={{display:"flex",alignItems:"center",gap:12,justifyContent:"center"}}>
           <button
             onClick={()=>{
-              const m=CANONICAL_MODELS.find(x=>x.id===selectedModel)||CANONICAL_MODELS[0];
+              const m=allModels.find(x=>x.id===selectedModel)||CANONICAL_MODELS[0];
               onLoadModel(m);
             }}
             style={{padding:"12px 32px",borderRadius:9,border:`2px solid ${C.gold}`,
               background:`${C.gold}20`,color:C.gold,fontSize:13,fontWeight:700,cursor:"pointer",
               fontFamily:sans,letterSpacing:"0.05em"}}>
-            Load "{CANONICAL_MODELS.find(m=>m.id===selectedModel)?.name}" →
+            Load "{allModels.find(m=>m.id===selectedModel)?.name||"Base Case"}" →
           </button>
           <button onClick={onEnter}
             style={{padding:"12px 20px",borderRadius:9,border:`1px solid ${C.border}`,
@@ -790,36 +828,49 @@ function CoverPage({onEnter,onLoadModel,lastModelId}){
 }
 
 
-function WhatIfPage({purchasePrice,hbu,buyerTax,settings:WS,modelNoi}){
+function WhatIfPage({purchasePrice,hbu,buyerTax,sellerNote,settings:WS,modelNoi,onSavePreset,modelResetKey}){
+  // ── ISOLATED DEAL PARAMS — changes here never touch the Model/Program page ──
+  const [wiPP,     setWiPP]    = useState(purchasePrice);
+  const [wiHbu,    setWiHbu]   = useState(hbu);
+  const [wiBuyerTax,setWiBT]   = useState(buyerTax);
+  const [wiNote,   setWiNote]  = useState(sellerNote||22e6);
+
+  // ── WHAT-IF ANALYSIS PARAMS ────────────────────────────────────────────────
   const [agi,       setAgi]    = useState(10e6);
-  const [invEquity, setInvEq]  = useState(WS?.defaultSellerFinance||22e6);
+  const [invEquity, setInvEq]  = useState(sellerNote||22e6);
   const [irr,       setIrr]    = useState(0.12);
-  const [taxRate,   setTax]    = useState(0.503);
+  const [taxRate,   setTax]    = useState(Math.min((buyerTax||0.37)+0.133, 0.58));
   const [noiFactor, setNoi]    = useState(1.0);
   const [priorCFwd, setPrior]  = useState(0);
   const [agiFactor, setAgiFac] = useState(0.60);
+  const [saveMsg,   setSaveMsg]= useState("");
+  const [presetName,setPresetName]=useState("");
   const YEARS=16;
 
-  // Re-sync from settings/model props when they change (e.g. after Settings save or model load)
+  // Reset ALL What-If local state when a new model is loaded (modelResetKey changes)
   useEffect(()=>{
-    if(WS?.defaultSellerFinance) setInvEq(WS.defaultSellerFinance);
-    if(WS?.defaultBuyerTaxRate)  setTax(Math.min(WS.defaultBuyerTaxRate+0.133, 0.58)); // fed+CA combined
-    // reset noiFactor to 1.0 on model reload
+    setWiPP(purchasePrice);
+    setWiHbu(hbu);
+    setWiBT(buyerTax);
+    setWiNote(sellerNote||22e6);
+    setInvEq(sellerNote||22e6);
+    setTax(Math.min((buyerTax||0.37)+0.133, 0.58));
     setNoi(1.0);
-  },[WS?.defaultSellerFinance, WS?.defaultBuyerTaxRate]);
+    setPrior(0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[modelResetKey]);
 
-  // Anchor NOI from model if available, else fall back to hardcoded schedule
+  // Anchor NOI from model if available, else fall back
   const anchorNoi = modelNoi && modelNoi > 0 ? modelNoi : 2.2e6;
 
   const model=useMemo(()=>{
-    // Use settings-driven rates when available
+    // Use local isolated deal params — these are What-If-only, never affect Model page
     const noteRate = WS?.noteInterestRate || 0.055;
-    const notePrincipal = WS?.defaultSellerFinance || 22e6;
-    const notePmt   = notePrincipal*noteRate;
+    const notePmt   = wiNote*noteRate;
     const rdcMgmt   = 500e3;
-    const carryPmt  = (WS?.defaultSellerFinance||22e6)*0.035;
+    const carryPmt  = wiNote*0.035;
     const commPref  = 200*50e3;
-    const easVal    = Math.max(0,hbu-purchasePrice);
+    const easVal    = Math.max(0,wiHbu-wiPP);
     const annualDed = easVal/YEARS;
     const agiCap    = agi*agiFactor;
     const irrTarget = invEquity*irr;
@@ -877,7 +928,7 @@ function WhatIfPage({purchasePrice,hbu,buyerTax,settings:WS,modelNoi}){
 
     return{rows,tot,easVal,annualDed,agiCap,irrTarget,
       impliedIRR:(tot.taxSave+tot.invCash)/(invEquity*YEARS)};
-  },[agi,invEquity,irr,taxRate,noiFactor,priorCFwd,agiFactor,hbu,purchasePrice,anchorNoi,WS]);
+  },[agi,invEquity,irr,taxRate,noiFactor,priorCFwd,agiFactor,wiPP,wiHbu,wiNote,anchorNoi,WS]);
 
   const {rows,tot,easVal,annualDed,agiCap,irrTarget,impliedIRR}=model;
 
@@ -906,26 +957,88 @@ function WhatIfPage({purchasePrice,hbu,buyerTax,settings:WS,modelNoi}){
   return(
     <div style={{padding:"18px 22px",overflowY:"auto",height:"calc(100vh - 48px)"}}>
       {/* header */}
-      <div style={{marginBottom:14}}>
-        <div style={{fontSize:9,color:C.gold,letterSpacing:"0.2em",textTransform:"uppercase",marginBottom:2}}>What-If Analysis</div>
-        <div style={{fontSize:17,fontWeight:800,fontFamily:serif,color:C.cream,marginBottom:3}}>
-          Tax Deductions · Cash Flows · Returns to All Parties — Year 1 to {YEARS}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
+        <div>
+          <div style={{fontSize:9,color:C.gold,letterSpacing:"0.2em",textTransform:"uppercase",marginBottom:2}}>What-If Analysis — Isolated Sandbox</div>
+          <div style={{fontSize:17,fontWeight:800,fontFamily:serif,color:C.cream,marginBottom:3}}>
+            Tax Deductions · Cash Flows · Returns to All Parties — Year 1 to {YEARS}
+          </div>
+          <div style={{fontSize:11,color:C.mist}}>
+            Changes here <strong style={{color:C.teal}}>never affect the Program/Model page</strong>. Deal params below are What-If-only copies.{" "}
+            <span style={{color:C.teal,fontFamily:mono}}>NOI basis: {fM(anchorNoi,2)} (Yr3 from Model{modelNoi>0?" — live":""})</span>
+          </div>
         </div>
-        <div style={{fontSize:11,color:C.mist}}>Adjust assumptions. Table updates live. Teal years = investor draws zero cash from PBC. Illustrative — not tax advice.{" "}
-          <span style={{color:C.teal,fontFamily:mono}}>NOI basis: {fM(anchorNoi,2)} (Yr3 from Model{modelNoi>0?" — live":"" })</span>
+        {/* SAVE PRESET */}
+        <div style={{flexShrink:0,marginLeft:16,background:C.bgCard,border:`1px solid ${C.gold}50`,borderRadius:9,padding:"10px 14px",minWidth:240}}>
+          <div style={{fontSize:9,color:C.gold,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:7}}>💾 Save as Preset</div>
+          <input
+            value={presetName}
+            onChange={e=>setPresetName(e.target.value)}
+            placeholder='e.g. "Roger Ask — Conservative"'
+            style={{width:"100%",background:C.bgLight,border:`1px solid ${C.border}`,borderRadius:5,
+              color:C.cream,fontFamily:mono,fontSize:11,padding:"5px 8px",outline:"none",marginBottom:7,boxSizing:"border-box"}}
+          />
+          <button
+            onClick={()=>{
+              if(!presetName.trim())return;
+              const preset={
+                id:`user-${Date.now()}`,
+                name:presetName.trim(),
+                description:`What-If save — PP $${(wiPP/1e6).toFixed(0)}M · HBU $${(wiHbu/1e6).toFixed(0)}M · NOI ${(noiFactor*100).toFixed(0)}% · IRR ${(irr*100).toFixed(1)}%`,
+                badge:"★",badgeColor:C.lavender,
+                isUserSaved:true,
+                savedAt:new Date().toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}),
+                state:{
+                  scenario:"mid",
+                  activePhases:{p1:true,p2:false,p3:false},
+                  activeStreams:Object.fromEntries(STREAM_DEFS.map(s=>[s.id,s.on])),
+                  purchasePrice:wiPP,hbu:wiHbu,buyerTax:wiBuyerTax,sellerNote:wiNote,
+                  occ:0.65,parcelSale:2e6,
+                  unitTypes:{reno:{enabled:false,count:3,rate:250,costPerUnit:100e3},namu_std:{enabled:false,count:8,rate:320},namu_prem:{enabled:false,count:4,rate:520}},
+                  whatif:{agi,invEquity,irr,taxRate,noiFactor,priorCFwd,agiFactor},
+                },
+              };
+              onSavePreset(preset);
+              setPresetName("");
+              setSaveMsg("✓ Saved!");
+              setTimeout(()=>setSaveMsg(""),2500);
+            }}
+            style={{width:"100%",padding:"6px",borderRadius:5,border:`1px solid ${C.gold}`,
+              background:`${C.gold}20`,color:C.gold,cursor:"pointer",fontWeight:700,fontSize:11}}>
+            {saveMsg||"Save Preset →"}
+          </button>
         </div>
       </div>
 
-      {/* sliders */}
+      {/* DEAL PARAMS — isolated copies, won't affect Model page */}
+      <div style={{background:`${C.coral}08`,border:`1px solid ${C.coral}30`,borderRadius:8,padding:"11px 14px",marginBottom:10}}>
+        <div style={{fontSize:9,color:C.coral,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:9}}>
+          Deal Parameters — What-If Only · Program page unaffected
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:9}}>
+          {[
+            {label:"Purchase Price",  val:wiPP,      set:setWiPP,  min:50e6,max:80e6, step:500e3,fmt:v=>fM(v,1), color:C.coral,  sub:"What-if deal price"},
+            {label:"HBU Appraisal",   val:wiHbu,     set:setWiHbu, min:90e6,max:200e6,step:1e6,  fmt:v=>fM(v,0), color:C.lavender,sub:"Highest & best use"},
+            {label:"Seller Note",     val:wiNote,    set:setWiNote,min:0,   max:35e6, step:500e3,fmt:v=>fM(v,1), color:C.amber,  sub:"Carried at close"},
+            {label:"Buyer Tax Rate",  val:wiBuyerTax,set:setWiBT,  min:.25, max:.54,  step:.01,  fmt:fP,          color:C.sky,    sub:"Fed + CA marginal"},
+          ].map(sl=>(
+            <div key={sl.label} style={{background:C.bgCard,borderRadius:7,padding:"8px 10px",border:`1px solid ${C.border}`}}>
+              <Slider {...sl}/>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ANALYSIS SLIDERS */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:9,marginBottom:14}}>
         {[
-          {label:"Investor Equity",val:invEquity,set:setInvEq,min:15e6,max:30e6,step:5e5,fmt:v=>fM(v,1),color:C.sky,    sub:"PBC founding units (60%)"},
-          {label:"Investor CA AGI", val:agi,      set:setAgi, min:3e6, max:20e6, step:5e5,fmt:v=>fM(v,1),color:C.teal,   sub:"Annual California AGI"},
-          {label:"AGI Limit",       val:agiFactor,set:setAgiFac,min:.3,max:1.0,step:.05,fmt:fP,          color:C.sage,   sub:"60% standard · 100% farmer"},
-          {label:"Blended IRR",     val:irr,      set:setIrr,  min:.08,max:.20, step:.005,fmt:fP,         color:C.gold,   sub:"Tax savings credited first"},
-          {label:"Tax Rate",        val:taxRate,  set:setTax,  min:.35,max:.58, step:.005,fmt:fP,         color:C.amber,  sub:"Fed + CA combined marginal"},
-          {label:"Prior Carryforward",val:priorCFwd,set:setPrior,min:0,max:20e6,step:5e5,fmt:v=>fM(v,1), color:C.coral,  sub:"§170(h) existing carryforward"},
-          {label:"NOI Scenario",    val:noiFactor,set:setNoi, min:.5,  max:1.5,  step:.05, fmt:v=>`${(v*100).toFixed(0)}%`,color:C.lavender,sub:"% of base case revenue"},
+          {label:"Investor Equity",    val:invEquity, set:setInvEq,  min:15e6,max:30e6, step:5e5, fmt:v=>fM(v,1), color:C.sky,     sub:"PBC founding units (60%)"},
+          {label:"Investor CA AGI",    val:agi,       set:setAgi,    min:3e6, max:20e6,  step:5e5, fmt:v=>fM(v,1), color:C.teal,    sub:"Annual California AGI"},
+          {label:"AGI Limit",          val:agiFactor, set:setAgiFac, min:.3,  max:1.0,   step:.05, fmt:fP,          color:C.sage,    sub:"60% standard · 100% farmer"},
+          {label:"Blended IRR",        val:irr,       set:setIrr,    min:.08, max:.20,   step:.005,fmt:fP,          color:C.gold,    sub:"Tax savings credited first"},
+          {label:"Tax Rate",           val:taxRate,   set:setTax,    min:.35, max:.58,   step:.005,fmt:fP,          color:C.amber,   sub:"Fed + CA combined marginal"},
+          {label:"Prior Carryforward", val:priorCFwd, set:setPrior,  min:0,   max:20e6,  step:5e5, fmt:v=>fM(v,1), color:C.coral,   sub:"§170(h) existing carryforward"},
+          {label:"NOI Scenario",       val:noiFactor, set:setNoi,    min:.5,  max:1.5,   step:.05, fmt:v=>`${(v*100).toFixed(0)}%`,color:C.lavender,sub:"% of model Yr3 NOI"},
         ].map(sl=>(
           <div key={sl.label} style={{background:C.bgCard,borderRadius:8,padding:"9px 11px",border:`1px solid ${C.border}`}}>
             <Slider {...sl}/>
@@ -1098,8 +1211,10 @@ export default function App(){
     const ss=await sGet(SK_SESSION,null);
     const sc=await sGet(SK_SCENARIOS,[]);
     const lm=await sGet(SK_LAST_MODEL,"base");
+    const up=await sGet(SK_USER_PRESETS,[]);
     setSettings({...DEFAULT_SETTINGS,...sv});
     setLastModelId(lm||"base");
+    setUserPresets(up||[]);
     if(ss){
       try{
         if(ss.scenario)      setScenario(ss.scenario);
@@ -1219,6 +1334,8 @@ export default function App(){
   },[activePhases,activeStreams,scenario,purchasePrice,hbu,buyerTax,sellerNote,unitTypes,occ,parcelSale,mult,S]);
 
   const [lastModelId,setLastModelId]=useState("base");
+  const [userPresets,setUserPresets]=useState([]);
+  const [modelResetKey,setModelResetKey]=useState(0); // increments on every canonical model load → resets WhatIf state
 
   // ── SYNC: when Settings saves, push deal params back into model slider state ──
   const applySettingsToModel = useCallback((s)=>{
@@ -1243,7 +1360,25 @@ export default function App(){
     setParcelSale(ss.parcelSale);
     setLastModelId(m.id);
     sSet(SK_LAST_MODEL,m.id);
+    setModelResetKey(k=>k+1); // signal WhatIfPage to reset its isolated state
     setView("model");
+  },[]);
+
+  // ── USER PRESET MANAGEMENT ────────────────────────────────────────────────
+  const saveUserPreset = useCallback((preset)=>{
+    setUserPresets(prev=>{
+      const next=[...prev,preset];
+      sSet(SK_USER_PRESETS,next);
+      return next;
+    });
+  },[]);
+
+  const deleteUserPreset = useCallback((id)=>{
+    setUserPresets(prev=>{
+      const next=prev.filter(p=>p.id!==id);
+      sSet(SK_USER_PRESETS,next);
+      return next;
+    });
   },[]);
   const togglePhase=pid=>setActivePhases(p=>({...p,[pid]:!p[pid]}));
   const toggleStream=(id,v)=>setActiveStreams(p=>({...p,[id]:v}));
@@ -1307,10 +1442,10 @@ export default function App(){
       </div>
     </div>
 
-    {view==="cover"&&<CoverPage onEnter={()=>setView("model")} onLoadModel={loadCanonicalModel} lastModelId={lastModelId}/>}
+    {view==="cover"&&<CoverPage onEnter={()=>setView("model")} onLoadModel={loadCanonicalModel} lastModelId={lastModelId} userPresets={userPresets} onDeletePreset={deleteUserPreset}/>}
     {view==="settings"&&<div style={{overflowY:"auto",height:"calc(100vh - 48px)"}}><SettingsPage settings={S} setSettings={setSettings} onClose={()=>setView("model")} onApply={applySettingsToModel}/></div>}
     {view==="scenarios"&&<div style={{overflowY:"auto",height:"calc(100vh - 48px)"}}><ScenariosPage scenarios={scenarios} onSave={saveScenario} onLoad={loadScenario} onDelete={delScenario} onClose={()=>setView("model")}/></div>}
-    {view==="whatif"&&<WhatIfPage purchasePrice={purchasePrice} hbu={hbu} buyerTax={buyerTax} settings={S} modelNoi={calc.noi3}/>}
+    {view==="whatif"&&<WhatIfPage purchasePrice={purchasePrice} hbu={hbu} buyerTax={buyerTax} sellerNote={sellerNote} settings={S} modelNoi={calc.noi3} onSavePreset={saveUserPreset} modelResetKey={modelResetKey}/>}
 
     {view==="model"&&<div style={{display:"grid",gridTemplateColumns:"282px 1fr 302px",minHeight:"calc(100vh - 48px)"}}>
 
