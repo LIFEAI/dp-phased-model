@@ -90,6 +90,89 @@ const PHASE_META={
   p3:{label:"Phase III",sublabel:"Conservation Finance",    color:C.p3,desc:"Stack public + private conservation revenue streams."},
 };
 
+// ─── DEAL PARTIES + WATERFALL ─────────────────────────────────────────────────
+// ✏️  TO EDIT: update names, roles, narratives, What-If defaults → src/players.js
+//    This block is auto-synced from players.js. Do NOT edit the data here — edit
+//    players.js and re-paste if needed. Each player's `whatif` object sets the
+//    initial slider values when that player tab is selected on the What-If page.
+// ─────────────────────────────────────────────────────────────────────────────
+const PLAYERS=[
+  {id:"roger",      icon:"🏡",name:"Roger & Robin Himovitz",     role:"Seller / Conservation Sponsor",                    colorHex:"#C9A84C",tier:null,tierLabel:"At Close",
+   tags:["At Close","Conservation Sponsor","Installment Sale §453"],
+   position:"Exits with full consideration. Conservation legacy preserved.",
+   gets:"~$49–50M total — $22M assumed debt relief + $20–25M investor cash at close + $2–3M carry-back note (IRC §453 installment sale). Roger's all-in basis ~$50–55M; structure delivers parity while permanently protecting the coast.",
+   puts:"219 acres · 18 parcels · Gaviota Coast · $22M existing IO note · relationships with Chumash nations · Dos Pueblos Institute 501(c)(3)",
+   waterfall:"Seller — paid at close. Not a waterfall participant post-close.",
+   whatif:{label:"Seller — §453 Installment Sale Analysis",description:"Net proceeds after note assumption, carry-back, and capital gains at §453 installment rate.",
+     invEquity:22e6,agi:8e6,agiFactor:0.60,irr:0.035,taxRate:0.40,noiFactor:1.0,priorCFwd:0,purchasePrice:62e6,hbu:133e6,buyerTax:0.37,sellerNote:22e6}},
+
+  {id:"trust",      icon:"🏦",name:"Income Trust",                role:"Senior Lender — Existing $22M First Mortgage",      colorHex:"#D96845",tier:1,tierLabel:"Tier 1",
+   tags:["Tier 1","5% IO","Note Assumption","Senior Debt"],
+   position:"Tier 1 — paid first, always, every year.",
+   gets:"$1,100,000/yr interest-only at 5% on $22M balance. Note assumed by new PBC at close. Trust receives same IO stream with no disruption — preferred outcome over payoff.",
+   puts:"$22M already deployed. No new capital required.",
+   waterfall:"Tier 1 — senior to all equity. Pre-condition of every other distribution. Non-negotiable.",
+   whatif:{label:"Senior Lender — Debt Service Coverage",description:"Can operating NOI always cover the $1.1M/yr IO obligation? Stress-test at 70% base NOI.",
+     invEquity:22e6,agi:22e6,agiFactor:1.0,irr:0.05,taxRate:0.37,noiFactor:0.70,priorCFwd:0,purchasePrice:62e6,hbu:133e6,buyerTax:0.37,sellerNote:22e6}},
+
+  {id:"investor",   icon:"💎",name:"Anchor Investor",              role:"Founding Equity — 60% PBC Units",                  colorHex:"#4A9CC8",tier:6,tierLabel:"Tier 6–7",
+   tags:["Tier 6–7","60% PBC","12% Blended IRR","§170(h)","Senior to Community"],
+   position:"Tier 6–7 — senior to community. Blended 12% IRR; tax savings credited first.",
+   gets:"$57–59M in IRC §170(h) conservation easement tax savings over 16 years (at ~50% combined CA+Fed rate) + 60% of PBC NAV growth ($27–33M investor share at Year 7) + full 1× return of capital + 12% IRR cash distributions from Year 8+.",
+   puts:"$20–25M equity at close. Must have California AGI sufficient to absorb ~$5–7M in deductions/year. Must hold title individually or as grantor trust (not LLC/irrevocable trust) for §170(h) qualification.",
+   waterfall:"Tier 6 — blended 12% IRR (tax savings credited first; zero cash draw from PBC Years 1–7). Tier 7 — full 1× return of capital before community preferred begins.",
+   whatif:{label:"Anchor Investor — §170(h) Tax + IRR Analysis",description:"16-year blended return: conservation easement tax savings + Year 8+ cash distributions.",
+     invEquity:22e6,agi:12e6,agiFactor:0.60,irr:0.12,taxRate:0.503,noiFactor:1.0,priorCFwd:0,purchasePrice:62e6,hbu:133e6,buyerTax:0.37,sellerNote:22e6}},
+
+  {id:"community",  icon:"🤝",name:"Community Members (~200)",     role:"Community Capital — 20% PBC Units",                colorHex:"#8A7EC8",tier:8,tierLabel:"Tier 8",
+   tags:["Tier 8","$50K/unit","1.67× Preferred","§170(b)","Subordinated"],
+   position:"Tier 8 — subordinated to investor. 1.67× preferred return on equity component.",
+   gets:"$10,060 immediate Year 1 tax savings per member ($20K charitable × ~50% rate) + 1.67× preferred return on $30K equity + service credits. Ongoing 20% residual distributions post-preferred.",
+   puts:"$50,000/unit — $30K equity (PBC units) + $20K charitable contribution (Stewardship Trust, §170(b)).",
+   waterfall:"Tier 8 — subordinated to Tiers 1–7. Begins after investor full 1× + IRR satisfied (~Year 7–9). $10M total preferred pool across 200 members.",
+   whatif:{label:"Community Member — $50K Unit Analysis",description:"Single unit: $10K §170(b) tax savings + 1.67× preferred on $30K equity.",
+     invEquity:30e3,agi:250e3,agiFactor:0.60,irr:0.08,taxRate:0.45,noiFactor:1.0,priorCFwd:0,purchasePrice:62e6,hbu:133e6,buyerTax:0.37,sellerNote:22e6}},
+
+  {id:"chumash",    icon:"🏺",name:"Chumash Nations",              role:"Cultural Commons — Multi-Tribal Co-Management",     colorHex:"#7BAE7F",tier:null,tierLabel:"Co-Sovereign",
+   tags:["Co-Sovereign","Cultural Commons","TEK","Irrevocable","PRT Covenant"],
+   position:"Co-sovereign. Not a financial investor. Governance rights run with the land in perpetuity.",
+   gets:"Return of Mikiw and Kuyamu village sites (Year 1–2). Irrevocable co-management rights. Chumash Cultural Commons governance. Revenue share from Chumash Kitchen, NOAA sanctuary grants, TEK programs.",
+   puts:"Co-management expertise · Traditional Ecological Knowledge · Cultural authority and legitimacy that no buyer can purchase or replicate.",
+   waterfall:"PRT Covenant recipient — 5% of gross PBC revenue flows to Stewardship Trust for cultural programs. Governance rights not subordinated to any financial tier.",
+   whatif:{label:"Cultural Commons — Revenue Contribution Analysis",description:"Cultural Kitchen + NOAA grants + TEK programs — contribution to PBC NOI modeled.",
+     invEquity:4e6,agi:2e6,agiFactor:1.0,irr:0.05,taxRate:0.00,noiFactor:1.0,priorCFwd:0,purchasePrice:62e6,hbu:133e6,buyerTax:0.37,sellerNote:22e6}},
+
+  {id:"rdc",        icon:"⚙️",name:"RDC + Regenesis Group",        role:"Deal Architect · Manager · Consultant",             colorHex:"#E8A030",tier:3,tierLabel:"Tier 3+9",
+   tags:["Tier 3","Tier 9","20% Promote","20% Equity","Back-Loaded","Deal Architect"],
+   position:"Tier 3 (management fee, operating priority) + Tier 9 (promote and equity, back-loaded).",
+   gets:"$500K Transaction Advisory Fee at close + $500K/yr management fee + 4% development fee on new capital + 20% carried interest (promote) above hurdle + 20% PBC founding equity on sale. Total: $2–6M over 8-year hold.",
+   puts:"All work product — financial models, Triple Play structure, conservation easement design, Five Capitals framework, community raise architecture, PRT governance. 7-year management commitment.",
+   waterfall:"Tier 3 (management fee — operating priority, pre-equity). Tier 9 (promote + 20% equity residual — earned only after investor and community are whole).",
+   whatif:{label:"RDC — Management Fee + Promote Economics",description:"$500K/yr fee (Tier 3) + 20% promote after investor/community whole (Tier 9). NOI coverage.",
+     invEquity:500e3,agi:3e6,agiFactor:0.60,irr:0.20,taxRate:0.42,noiFactor:1.0,priorCFwd:0,purchasePrice:62e6,hbu:133e6,buyerTax:0.37,sellerNote:22e6}},
+
+  {id:"stewardship",icon:"🌿",name:"Stewardship Trust (501c3)",    role:"Land Sovereign · Conservation Easement Holder",     colorHex:"#29AFA0",tier:5,tierLabel:"Tier 5",
+   tags:["Tier 5","501(c)(3)","PRT Covenant","Conservation Easement","Land Sovereign"],
+   position:"PRT Covenant recipient. Holds fee title. Issues conservation easement to LTSBC. Non-financial party — mission holder.",
+   gets:"$4–5M from community charitable contributions at close. 5% of gross PBC revenue annually (non-waivable). Holds perpetual conservation easement and fee title.",
+   puts:"Conservation easement to Land Trust for Santa Barbara County (LTSBC). Governance covenants. Mission accountability.",
+   waterfall:"Tier 5 — 5% PRT Covenant on gross revenue. Paid before any equity distributions. Funded at close from community raise charitable component.",
+   whatif:{label:"Stewardship Trust — 5% PRT Covenant Stream",description:"Annual 5% gross revenue covenant — 16-year cumulative conservation funding.",
+     invEquity:4e6,agi:4e6,agiFactor:1.0,irr:0.05,taxRate:0.00,noiFactor:1.0,priorCFwd:0,purchasePrice:62e6,hbu:133e6,buyerTax:0.37,sellerNote:22e6}},
+];
+
+const WATERFALL_TIERS=[
+  {tier:"1",label:"$22M Income Trust — Note IO",        amt:"$1.1M/yr",  colorHex:"#D96845",note:"Senior debt · 5% IO · paid first always"},
+  {tier:"2",label:"Senior Conservation Loan (if any)",  amt:"Scenario A",colorHex:"#555555",note:"Scenario C carries no new senior debt"},
+  {tier:"3",label:"RDC Management Fee",                 amt:"$500K/yr",  colorHex:"#E8A030",note:"Operating priority · pre-equity"},
+  {tier:"4",label:"Roger Carry-Back Interest",          amt:"$88K/yr",   colorHex:"#C9A84C",note:"3.5% IO · retired Year 1–2 from Chumash parcel sale"},
+  {tier:"5",label:"Stewardship Trust — PRT Covenant",   amt:"5% gross",  colorHex:"#29AFA0",note:"Non-waivable · funds conservation + cultural programs"},
+  {tier:"6",label:"Investor — Blended 12% IRR",         amt:"~$0 Yr 1–7",colorHex:"#4A9CC8",note:"Tax savings credited first · zero cash draw Years 1–7"},
+  {tier:"7",label:"Investor — Return of Capital",       amt:"$20–25M",   colorHex:"#4A9CC8",note:"Full 1× before community preferred begins"},
+  {tier:"8",label:"Community — 1.67× Preferred",        amt:"$50K/unit", colorHex:"#8A7EC8",note:"200 members · subordinated to Tiers 6–7 · ~Year 7–9"},
+  {tier:"9",label:"RDC Promote + Residual 60/20/20",    amt:"20% then ÷",colorHex:"#E8A030",note:"After community preferred · Inv 60% / Comm 20% / RDC 20%"},
+];
+
 const SK_SETTINGS   ="prt:settings:v1";
 const SK_SESSION    ="prt:session:dos-pueblos:v1";
 const SK_SCENARIOS  ="prt:scenarios:dos-pueblos:v1";
@@ -475,253 +558,6 @@ function CoverPage({onEnter,onLoadModel,lastModelId,userPresets,onDeletePreset})
   const [selectedModel,setSelectedModel]=useState(lastModelId||"base");
   const allModels=[...CANONICAL_MODELS,...(userPresets||[])];
 
-  const PLAYERS=[
-    {
-      id:"roger",
-      color:C.gold,
-      icon:"🏡",
-      name:"Roger & Robin Himovitz",
-      role:"Seller / Conservation Sponsor",
-      position:"Exits with full consideration. Conservation legacy preserved.",
-      gets:"~$49–50M total — $22M assumed debt relief + $20–25M investor cash at close + $2–3M carry-back note (IRC §453 installment sale). Roger's all-in basis ~$50–55M; structure delivers parity while permanently protecting the coast.",
-      puts:"219 acres · 18 parcels · Gaviota Coast · $22M existing IO note · relationships with Chumash nations · Dos Pueblos Institute 501(c)(3)",
-      waterfall:"Seller — paid at close. Not a waterfall participant post-close.",
-      tags:["At Close","Conservation Sponsor","Installment Sale §453"],
-    },
-    {
-      id:"trust",
-      color:C.coral,
-      icon:"🏦",
-      name:"Income Trust",
-      role:"Senior Lender — Existing $22M First Mortgage",
-      position:"Tier 1 — paid first, always, every year.",
-      gets:"$1,100,000/yr interest-only at 5% on $22M balance. Note assumed by new PBC at close. Trust receives same IO stream with no disruption — preferred outcome over payoff.",
-      puts:"$22M already deployed. No new capital required.",
-      waterfall:"Tier 1 — senior to all equity. Pre-condition of every other distribution. Non-negotiable.",
-      tags:["Tier 1","5% IO","Note Assumption","Senior Debt"],
-    },
-    {
-      id:"investor",
-      color:C.sky,
-      icon:"💎",
-      name:"Anchor Investor",
-      role:"Founding Equity — 60% PBC Units",
-      position:"Tier 6–7 — senior to community. Blended 12% IRR; tax savings credited first.",
-      gets:"$57–59M in IRC §170(h) conservation easement tax savings over 16 years (at ~50% combined CA+Fed rate) + 60% of PBC NAV growth ($27–33M investor share at Year 7) + full 1× return of capital + 12% IRR cash distributions from Year 8+. Net cost of ownership negative before a single dollar of operations.",
-      puts:"$20–25M equity at close. Must have California AGI sufficient to absorb ~$5–7M in deductions/year. Must hold title individually or as grantor trust (not LLC/irrevocable trust) for §170(h) qualification.",
-      waterfall:"Tier 6 — blended 12% IRR (tax savings credited first; zero cash draw from PBC Years 1–7). Tier 7 — full 1× return of capital before community preferred begins.",
-      tags:["Tier 6–7","60% PBC","12% Blended IRR","§170(h)","Senior to Community"],
-    },
-    {
-      id:"community",
-      color:C.lavender,
-      icon:"🤝",
-      name:"Community Members (~200)",
-      role:"Community Capital — 20% PBC Units",
-      position:"Tier 8 — subordinated to investor. 1.67× preferred return on equity component.",
-      gets:"$10,060 in immediate Year 1 tax savings per member ($20K charitable component × ~50% rate). 1.67× preferred return on $30K equity = $50K/unit returned before residual distributions. Service credits (glamping nights, farm tours, cultural programs). Ongoing 20% residual distributions post-preferred.",
-      puts:"$50,000/unit — split $30K equity (PBC units) + $20K charitable contribution (Stewardship Trust, non-refundable, qualifies as IRC §170(b) deduction).",
-      waterfall:"Tier 8 — subordinated to Tiers 1–7. Begins after investor full 1× + IRR satisfied (~Year 7–9). $10M total preferred pool across 200 members.",
-      tags:["Tier 8","$50K/unit","1.67× Preferred","§170(b)","Subordinated"],
-    },
-    {
-      id:"chumash",
-      color:C.sage,
-      icon:"🏺",
-      name:"Chumash Nations",
-      role:"Cultural Commons — Multi-Tribal Co-Management",
-      position:"Co-sovereign. Not a financial investor. Governance rights run with the land in perpetuity.",
-      gets:"Return of Mikiw and Kuyamu village sites (BIA Land Buy-Back / CA tribal grants, Year 1–2). Irrevocable co-management rights over cultural zones. Chumash Cultural Commons governance seats. Revenue share from Chumash Kitchen, cultural programs, NOAA sanctuary grants. TEK documentation program. Marine interface access.",
-      puts:"Co-management expertise · Traditional Ecological Knowledge · Cultural authority and legitimacy that no buyer can purchase or replicate.",
-      waterfall:"PRT Covenant recipient — 5% of gross PBC revenue flows to Stewardship Trust, which funds cultural programs. Governance rights are not subordinated to any financial tier.",
-      tags:["Co-Sovereign","Cultural Commons","TEK","Irrevocable","PRT Covenant"],
-    },
-    {
-      id:"rdc",
-      color:C.amber,
-      icon:"⚙️",
-      name:"RDC + Regenesis Group",
-      role:"Deal Architect · Manager · Consultant",
-      position:"Tier 3 (management fee, operating priority) + Tier 9 (promote and equity, back-loaded).",
-      gets:"$20K retainer at signing + $500K Transaction Completion Advisory Fee at close + $500K/yr management fee (Years 1–7, stepping down to $350K/yr and $250K/yr at stabilization gates) + 4% development fee on new capital projects ($250K minimum) + 20% carried interest (promote) above hurdle + 20% PBC founding equity on sale. Total estimated economics: $2–6M over 8-year hold, back-loaded.",
-      puts:"All work product — financial models, Triple Play structure, conservation easement design, Five Capitals framework, community raise architecture, PRT governance, this application. 7-year management commitment post-close.",
-      waterfall:"Tier 3 (management fee — operating priority, pre-equity). Tier 9 (promote + 20% equity residual — earned only after investor and community are whole).",
-      tags:["Tier 3","Tier 9","20% Promote","20% Equity","Back-Loaded","Deal Architect"],
-    },
-    {
-      id:"stewardship",
-      color:C.teal,
-      icon:"🌿",
-      name:"Stewardship Trust  (501c3)",
-      role:"Land Sovereign · Conservation Easement Holder",
-      position:"PRT Covenant recipient. Holds fee title. Issues conservation easement to LTSBC. Non-financial party — mission holder.",
-      gets:"$4–5M from community charitable contributions at close ($20K × 200 members). 5% of gross PBC revenue annually (PRT Covenant — non-waivable). Holds perpetual conservation easement and fee title. Governs via Five Capitals readiness gates.",
-      puts:"Conservation easement to Land Trust for Santa Barbara County (LTSBC). Governance covenants. Mission accountability.",
-      waterfall:"Tier 5 — 5% PRT Covenant on gross revenue. Paid before any equity distributions. Funded at close from community raise charitable component.",
-      tags:["Tier 5","501(c)(3)","PRT Covenant","Conservation Easement","Land Sovereign"],
-    },
-  ];
-
-  const STACK=[
-    {tier:"1",label:"$22M Income Trust — Note IO",        amt:"$1.1M/yr",  color:C.coral,   note:"Senior debt · 5% IO · paid first always"},
-    {tier:"2",label:"Senior Conservation Loan (if any)",  amt:"Scenario A",color:"#555",    note:"Scenario C carries no new senior debt"},
-    {tier:"3",label:"RDC Management Fee",                 amt:"$500K/yr",  color:C.amber,   note:"Operating priority · pre-equity"},
-    {tier:"4",label:"Roger Carry-Back Interest",          amt:"$88K/yr",   color:C.gold,    note:"3.5% IO · retired Year 1–2 from Chumash parcel sale"},
-    {tier:"5",label:"Stewardship Trust — PRT Covenant",   amt:"5% gross",  color:C.teal,    note:"Non-waivable · funds conservation + cultural programs"},
-    {tier:"6",label:"Investor — Blended 12% IRR",         amt:"~$0 Yr 1–7",color:C.sky,     note:"Tax savings credited first · zero cash draw Years 1–7"},
-    {tier:"7",label:"Investor — Return of Capital",       amt:"$20–25M",   color:C.sky,     note:"Full 1× before community preferred begins"},
-    {tier:"8",label:"Community — 1.67× Preferred",        amt:"$50K/unit", color:C.lavender,note:"200 members · subordinated to Tiers 6–7 · ~Year 7–9"},
-    {tier:"9",label:"RDC Promote + Residual 60/20/20",    amt:"20% then ÷",color:C.amber,   note:"After community preferred · Inv 60% / Comm 20% / RDC 20%"},
-  ];
-
-  return(
-    <div style={{overflowY:"auto",height:"calc(100vh - 48px)",padding:"28px 32px",maxWidth:1200,margin:"0 auto"}}>
-
-      {/* HERO */}
-      <div style={{textAlign:"center",marginBottom:32,paddingBottom:24,borderBottom:`1px solid ${C.border}`}}>
-        <div style={{fontSize:9,color:C.gold,letterSpacing:"0.3em",textTransform:"uppercase",marginBottom:8}}>
-          Regenerative Development Corp  ·  Regenesis Group  ·  Confidential  ·  March 2026
-        </div>
-        <div style={{fontSize:32,fontWeight:800,fontFamily:serif,color:C.cream,letterSpacing:"-0.02em",marginBottom:6}}>
-          Dos Pueblos Ranch
-        </div>
-        <div style={{fontSize:14,color:C.teal,fontWeight:600,marginBottom:4}}>
-          Triple Play Conservation-Regenerative Acquisition  ·  219 Acres  ·  Gaviota Coast, California
-        </div>
-        <div style={{fontSize:12,color:C.mist,maxWidth:640,margin:"0 auto",lineHeight:1.7}}>
-          A Place Regenerative Trust structure integrating a Public Benefit Corporation, a Stewardship Trust, and a Chumash Cultural Commons — financed through a blended conservation easement and community capital raise.
-        </div>
-        <div style={{display:"flex",justifyContent:"center",gap:10,marginTop:16,flexWrap:"wrap"}}>
-          {[["$50M","Acquisition Price"],["$133M","HBU Appraisal"],["$115–118M","Easement Deduction"],
-            ["$57–59M","Tax Savings / 16yr"],["~200","Community Members"],["219 ac","Gaviota Coast"]
-          ].map(([v,l])=>(
-            <div key={l} style={{background:C.bgCard,border:`1px solid ${C.border}`,borderRadius:8,
-              padding:"10px 16px",textAlign:"center",minWidth:90}}>
-              <div style={{fontSize:15,fontWeight:800,color:C.gold,fontFamily:mono}}>{v}</div>
-              <div style={{fontSize:10,color:C.mist,marginTop:2}}>{l}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* WATERFALL STRIP */}
-      <div style={{marginBottom:28}}>
-        <div style={{fontSize:10,color:C.mist,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:10,fontWeight:700}}>
-          Distribution Waterfall — Nine Tiers — Sequence Governs All Distributions
-        </div>
-        <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
-          {STACK.map(s=>(
-            <div key={s.tier} style={{flex:"1 1 auto",minWidth:80,background:C.bgCard,
-              borderRadius:7,border:`1px solid ${s.color}40`,borderTop:`3px solid ${s.color}`,
-              padding:"8px 10px"}}>
-              <div style={{display:"flex",alignItems:"baseline",gap:5,marginBottom:3}}>
-                <span style={{fontSize:10,fontWeight:800,color:s.color,fontFamily:mono}}>{s.tier}</span>
-                <span style={{fontSize:11,fontWeight:700,color:C.cream,lineHeight:1.2}}>{s.label}</span>
-              </div>
-              <div style={{fontSize:12,fontWeight:700,color:s.color,fontFamily:mono,marginBottom:3}}>{s.amt}</div>
-              <div style={{fontSize:10,color:C.mist,lineHeight:1.4}}>{s.note}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* PLAYER CARDS */}
-      <div style={{marginBottom:16}}>
-        <div style={{fontSize:10,color:C.mist,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:12,fontWeight:700}}>
-          The Players — Who They Are · What They Put In · What They Get Back · Where They Sit in the Waterfall
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:10}}>
-          {PLAYERS.map(p=>(
-            <div key={p.id} style={{background:C.bgCard,borderRadius:10,
-              border:`1px solid ${p.color}35`,borderLeft:`4px solid ${p.color}`,
-              padding:"14px 16px"}}>
-              {/* name row */}
-              <div style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:10}}>
-                <span style={{fontSize:20,lineHeight:1}}>{p.icon}</span>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:13,fontWeight:800,color:p.color,lineHeight:1.2}}>{p.name}</div>
-                  <div style={{fontSize:10,color:C.mist,marginTop:2}}>{p.role}</div>
-                  <div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:5}}>
-                    {p.tags.map(t=>(
-                      <span key={t} style={{fontSize:8,padding:"2px 6px",borderRadius:3,
-                        background:`${p.color}18`,color:p.color,border:`1px solid ${p.color}40`,
-                        fontFamily:mono,fontWeight:600}}>{t}</span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              {/* position */}
-              <div style={{background:`${p.color}10`,borderRadius:6,padding:"7px 10px",marginBottom:8,
-                border:`1px solid ${p.color}25`}}>
-                <div style={{fontSize:9,color:p.color,fontWeight:700,letterSpacing:"0.08em",
-                  textTransform:"uppercase",marginBottom:3}}>Position</div>
-                <div style={{fontSize:11,color:C.cream,lineHeight:1.6}}>{p.position}</div>
-              </div>
-              {/* puts in / gets back */}
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7,marginBottom:7}}>
-                <div>
-                  <div style={{fontSize:9,color:C.lemon,textTransform:"uppercase",letterSpacing:"0.08em",
-                    marginBottom:3,fontWeight:700}}>Puts In</div>
-                  <div style={{fontSize:11,color:C.lemon,lineHeight:1.6}}>{p.puts}</div>
-                </div>
-                <div>
-                  <div style={{fontSize:9,color:p.color,textTransform:"uppercase",letterSpacing:"0.08em",
-                    marginBottom:3,fontWeight:700}}>Gets Back</div>
-                  <div style={{fontSize:11,color:C.cream,lineHeight:1.6}}>{p.gets}</div>
-                </div>
-              </div>
-              {/* waterfall */}
-              <div style={{borderTop:`1px solid ${C.border}`,paddingTop:6}}>
-                <div style={{fontSize:8,color:C.mist,textTransform:"uppercase",letterSpacing:"0.08em",
-                  marginBottom:2,fontWeight:700}}>Waterfall</div>
-                <div style={{fontSize:10,color:C.mist,lineHeight:1.5,fontStyle:"italic"}}>{p.waterfall}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* THREE ENTITIES */}
-      <div style={{marginBottom:24}}>
-        <div style={{fontSize:10,color:C.mist,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:10,fontWeight:700}}>
-          The Three Entities — One Purpose — PRT Covenants Bind All Three
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
-          {[
-            {color:C.gold,  icon:"⚙️", name:"Public Benefit Corp (PBC)",   sub:"Revenue Engine",
-              items:["Holds all operating revenue streams","60% investor + 20% community + 20% RDC","Nine-tier waterfall governs all distributions","Glamping · farm · film · cultural programs","Five Capitals dashboard reporting"]},
-            {color:C.teal,  icon:"🏛", name:"Stewardship Trust  501(c)(3)", sub:"Land Sovereign",
-              items:["Holds fee title in perpetuity","Issues conservation easement to LTSBC","Receives 5% PRT Covenant on gross revenue","Funded $4–5M from community raise at close","Governs via Five Capitals readiness gates"]},
-            {color:C.sage,  icon:"🏺", name:"Chumash Cultural Commons",     sub:"Multi-Tribal Co-Management",
-              items:["Irrevocable — runs with the land forever","Village sites Mikiw + Kuyamu returned Yr 1–2","TEK documentation + cultural program governance","Chumash Kitchen · NOAA sanctuary grants","Marine interface · ceremonial zone protection"]},
-          ].map((e,i)=>(
-            <div key={i} style={{background:C.bgCard,borderRadius:9,border:`1px solid ${e.color}40`,overflow:"hidden"}}>
-              <div style={{background:`${e.color}18`,borderBottom:`1px solid ${e.color}40`,
-                padding:"11px 14px",display:"flex",gap:9,alignItems:"center"}}>
-                <span style={{fontSize:18}}>{e.icon}</span>
-                <div>
-                  <div style={{fontSize:12,fontWeight:800,color:e.color}}>{e.name}</div>
-                  <div style={{fontSize:10,color:C.mist}}>{e.sub}</div>
-                </div>
-              </div>
-              <div style={{padding:"10px 14px"}}>
-                {e.items.map((item,j)=>(
-                  <div key={j} style={{display:"flex",gap:7,alignItems:"flex-start",marginBottom:5}}>
-                    <span style={{color:e.color,fontSize:10,marginTop:1,flexShrink:0}}>›</span>
-                    <span style={{fontSize:11,color:C.mist,lineHeight:1.5}}>{item}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-        <div style={{background:`${C.forest}18`,border:`1px solid ${C.gold}30`,borderRadius:7,
-          padding:"9px 14px",marginTop:8,textAlign:"center"}}>
-          <span style={{fontSize:10,color:C.gold,fontWeight:700}}>PRT Covenant: </span>
-          <span style={{fontSize:11,color:C.mist}}>5% of gross PBC revenue flows to Stewardship Trust perpetually · Five Capitals reporting is non-waivable · No entity may act against conservation mission · All expansion requires Five Capitals readiness gate</span>
-        </div>
-      </div>
-
       {/* MODEL PICKER */}
       <div style={{paddingTop:20,borderTop:`1px solid ${C.border}`}}>
         <div style={{fontSize:10,color:C.mist,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:12,fontWeight:700}}>
@@ -845,6 +681,7 @@ function WhatIfPage({purchasePrice,hbu,buyerTax,sellerNote,settings:WS,modelNoi,
   const [agiFactor, setAgiFac] = useState(0.60);
   const [saveMsg,   setSaveMsg]= useState("");
   const [presetName,setPresetName]=useState("");
+  const [activePlayer,setActivePlayer]=useState(null); // id of selected PLAYERS entry, or null for custom
   const YEARS=16;
 
   // Reset ALL What-If local state when a new model is loaded (modelResetKey changes)
@@ -857,6 +694,7 @@ function WhatIfPage({purchasePrice,hbu,buyerTax,sellerNote,settings:WS,modelNoi,
     setTax(Math.min((buyerTax||0.37)+0.133, 0.58));
     setNoi(1.0);
     setPrior(0);
+    setActivePlayer(null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[modelResetKey]);
 
@@ -956,6 +794,108 @@ function WhatIfPage({purchasePrice,hbu,buyerTax,sellerNote,settings:WS,modelNoi,
 
   return(
     <div style={{padding:"18px 22px",overflowY:"auto",height:"calc(100vh - 48px)"}}>
+
+      {/* ── PLAYER SELECTOR ─────────────────────────────────────────────────── */}
+      {/* ✏️  To edit player data or What-If defaults → PLAYERS[] constant      */}
+      <div style={{marginBottom:12}}>
+        <div style={{fontSize:9,color:C.gold,letterSpacing:"0.15em",textTransform:"uppercase",marginBottom:8,fontWeight:700}}>
+          View Analysis As — select a deal party to load their What-If defaults
+        </div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
+          <button onClick={()=>setActivePlayer(null)}
+            style={{padding:"6px 13px",borderRadius:7,cursor:"pointer",fontFamily:sans,fontSize:11,fontWeight:700,
+              border:`2px solid ${activePlayer===null?C.gold:C.border}`,
+              background:activePlayer===null?`${C.gold}18`:C.bgCard,
+              color:activePlayer===null?C.gold:C.creamDim}}>
+            ✎ Custom
+          </button>
+          {PLAYERS.map(p=>{
+            const sel=activePlayer===p.id;
+            const loadPlayer=()=>{
+              setActivePlayer(p.id);
+              const w=p.whatif;
+              setWiPP(w.purchasePrice); setWiHbu(w.hbu); setWiBT(w.buyerTax); setWiNote(w.sellerNote);
+              setInvEq(w.invEquity); setAgi(w.agi); setAgiFac(w.agiFactor);
+              setIrr(w.irr); setTax(w.taxRate); setNoi(w.noiFactor); setPrior(w.priorCFwd);
+            };
+            return(
+              <button key={p.id} onClick={loadPlayer}
+                style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:7,
+                  cursor:"pointer",fontFamily:sans,fontSize:11,fontWeight:sel?800:600,
+                  border:`2px solid ${sel?p.colorHex:C.border}`,
+                  background:sel?`${p.colorHex}18`:C.bgCard,
+                  color:sel?p.colorHex:C.creamDim,transition:"all 0.12s"}}>
+                <span style={{fontSize:13,lineHeight:1}}>{p.icon}</span>
+                <div style={{textAlign:"left"}}>
+                  <div style={{lineHeight:1.2,whiteSpace:"nowrap"}}>{p.name.length>22?p.name.slice(0,22)+"…":p.name}</div>
+                  <div style={{fontSize:8,opacity:.75,fontWeight:400,marginTop:1}}>{p.tierLabel}</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        {/* Active player detail band */}
+        {activePlayer&&(()=>{
+          const p=PLAYERS.find(x=>x.id===activePlayer);
+          if(!p)return null;
+          return(
+            <div style={{background:`${p.colorHex}0e`,border:`1px solid ${p.colorHex}40`,
+              borderLeft:`4px solid ${p.colorHex}`,borderRadius:8,padding:"10px 14px",
+              display:"grid",gridTemplateColumns:"1.2fr 1fr 1fr",gap:12}}>
+              <div>
+                <div style={{fontSize:10,color:p.colorHex,fontWeight:800,marginBottom:3}}>
+                  {p.icon} {p.whatif.label}
+                </div>
+                <div style={{fontSize:10,color:C.mist,lineHeight:1.55,marginBottom:5}}>{p.whatif.description}</div>
+                <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                  {p.tags.map(t=>(
+                    <span key={t} style={{fontSize:8,padding:"2px 5px",borderRadius:3,
+                      background:`${p.colorHex}18`,color:p.colorHex,border:`1px solid ${p.colorHex}35`,fontFamily:mono}}>{t}</span>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div style={{fontSize:9,color:C.lemon,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3,fontWeight:700}}>Puts In</div>
+                <div style={{fontSize:10,color:C.lemon,lineHeight:1.55}}>{p.puts}</div>
+              </div>
+              <div>
+                <div style={{fontSize:9,color:p.colorHex,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3,fontWeight:700}}>Gets Back</div>
+                <div style={{fontSize:10,color:C.cream,lineHeight:1.55}}>{p.gets}</div>
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* ── WATERFALL STRIP ─────────────────────────────────────────────────── */}
+      {/* ✏️  To edit tiers → WATERFALL_TIERS[] constant                        */}
+      <div style={{marginBottom:12}}>
+        <div style={{fontSize:9,color:C.mist,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:6,fontWeight:700}}>
+          Distribution Waterfall — Nine Tiers
+        </div>
+        <div style={{display:"flex",gap:3,flexWrap:"nowrap",overflowX:"auto",paddingBottom:4}}>
+          {WATERFALL_TIERS.map(t=>{
+            // highlight tier(s) that match the active player
+            const ap=activePlayer?PLAYERS.find(x=>x.id===activePlayer):null;
+            const lit=ap&&ap.tier!=null&&(String(ap.tier)===t.tier||
+              (ap.id==="rdc"&&(t.tier==="3"||t.tier==="9"))||
+              (ap.id==="investor"&&(t.tier==="6"||t.tier==="7")));
+            return(
+              <div key={t.tier} style={{flexShrink:0,minWidth:90,maxWidth:130,background:lit?`${t.colorHex}20`:C.bgCard,
+                borderRadius:6,border:`1px solid ${lit?t.colorHex:C.border}40`,
+                borderTop:`3px solid ${lit?t.colorHex:C.border}`,padding:"7px 9px"}}>
+                <div style={{display:"flex",alignItems:"baseline",gap:4,marginBottom:2}}>
+                  <span style={{fontSize:9,fontWeight:800,color:t.colorHex,fontFamily:mono}}>{t.tier}</span>
+                  <span style={{fontSize:9,fontWeight:700,color:lit?C.cream:C.creamDim,lineHeight:1.2}}>{t.label}</span>
+                </div>
+                <div style={{fontSize:11,fontWeight:700,color:t.colorHex,fontFamily:mono,marginBottom:2}}>{t.amt}</div>
+                <div style={{fontSize:9,color:C.mist,lineHeight:1.4}}>{t.note}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* header */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
         <div>
